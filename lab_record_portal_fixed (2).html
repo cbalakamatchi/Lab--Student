@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hindustan University - Lab Record Portal & Multi-Compiler</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --sidebar-w: 340px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-main); color: var(--text-main); -webkit-font-smoothing: antialiased; }
+        .font-mono { font-family: 'JetBrains Mono', Courier, monospace; }
+        .hidden { display: none !important; }
+
+        .app-container { max-width: 1340px; margin: 0 auto; padding: 18px; }
+        .pro-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 18px; margin-bottom: 18px; }
+        
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 600; font-size: 13px; padding: 8px 15px; border-radius: 7px; border: none; cursor: pointer; transition: all 0.15s ease; text-decoration: none; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-success { background: #10b981; color: #fff; }
+        .btn-success:hover { background: #059669; }
+        .btn-secondary { background: #f1f5f9; color: #334155; border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+        .btn-danger:hover { background: #fca5a5; }
+
+        input, select, textarea { font-family: inherit; font-size: 13px; border: 1px solid var(--border-color); border-radius: 7px; padding: 8px 11px; outline: none; width: 100%; transition: border-color 0.15s ease; background: #fff; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        label { font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px; display: block; }
+
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .gap-4 { gap: 16px; }
+        .grid { display: grid; }
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+        .grid-admin { grid-template-columns: 1.15fr 1fr; gap: 18px; }
+
+        .badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 5px; text-transform: uppercase; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-green { background: #d1fae5; color: #065f46; }
+        .badge-gray { background: #f1f5f9; color: #475569; }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 15px; }
+        .modal-content { background: #fff; border-radius: 12px; max-width: 480px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+
+        /* IDE Workspace Themes */
+        .ide-workspace { border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #1e293b; box-shadow: 0 8px 24px -4px rgba(0,0,0,0.3); transition: all 0.2s ease; }
+        .ide-topbar { padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 12px; }
+        .ide-tabs { display: flex; align-items: center; gap: 2px; }
+        .ide-tab { padding: 5px 12px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; border-top-left-radius: 6px; border-top-right-radius: 6px; cursor: pointer; }
+
+        .theme-c, .theme-cpp { background: #131d2a; color: #e2e8f0; }
+        .theme-c .ide-topbar, .theme-cpp .ide-topbar { background: #0b131f; color: #94a3b8; }
+        .theme-c .ide-tab.active, .theme-cpp .ide-tab.active { background: #1a283b; color: #38bdf8; border-top: 2px solid #38bdf8; }
+        .theme-c .ide-editor-textarea, .theme-cpp .ide-editor-textarea { background: #0a111a; color: #7dd3fc; }
+
+        .theme-java { background: #2b2b2b; color: #a9b7c6; }
+        .theme-java .ide-topbar { background: #1e1f22; color: #bcbec4; }
+        .theme-java .ide-tab.active { background: #2b2b2b; color: #ffc66d; border-top: 2px solid #ffc66d; }
+        .theme-java .ide-editor-textarea { background: #1e1f22; color: #cc7832; }
+
+        .theme-python { background: #1e1e1e; color: #d4d4d4; }
+        .theme-python .ide-topbar { background: #252526; color: #858585; }
+        .theme-python .ide-tab.active { background: #1e1e1e; color: #4ec9b0; border-top: 2px solid #3572A5; }
+        .theme-python .ide-editor-textarea { background: #1e1e1e; color: #9cdcfe; }
+
+        .theme-sql { background: #181e29; color: #cbd5e1; }
+        .theme-sql .ide-topbar { background: #0f1520; color: #94a3b8; }
+        .theme-sql .ide-tab.active { background: #181e29; color: #f59e0b; border-top: 2px solid #f59e0b; }
+        .theme-sql .ide-editor-textarea { background: #0c111a; color: #e2e8f0; }
+
+        .ide-editor-textarea { width: 100%; height: 240px; padding: 12px 14px; font-family: 'JetBrains Mono', Courier, monospace; font-size: 13px; line-height: 1.5; tab-size: 4; border: none; resize: vertical; outline: none; }
+        .ide-statusbar { padding: 5px 12px; font-size: 11px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.06); }
+
+        #securityToast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ef4444;
+            color: #ffffff;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            z-index: 9999999;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #pdfMountContainer { position: fixed; left: 0; top: 0; width: 760px; background: #ffffff; z-index: -9999; opacity: 0; pointer-events: none; }
+        .pdf-a4-page { width: 760px !important; padding: 35px 45px 30px 45px !important; background: #ffffff !important; box-sizing: border-box !important; position: relative !important; margin: 0 auto !important; }
+        .record-footer { margin-top: 25px; text-align: center; font-size: 9.5pt; font-weight: bold; border-top: 1px solid #000; padding-top: 6px; }
+    </style>
+<style>
+.db-hero{display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #e2e8f0;border-radius:16px;padding:22px 28px;margin-bottom:18px;overflow:hidden}
+#dbLogo>div{text-align:left!important}#dbLogo table{margin:0!important}
+.db-art{width:300px;max-width:42%;flex-shrink:0}
+.float,.fl{animation:dbfloat 4s ease-in-out infinite}.fl{animation-duration:3s}.fl.b{animation-delay:.7s}.fl.c{animation-delay:1.2s}.fl.d{animation-delay:.3s}
+@keyframes dbfloat{50%{transform:translateY(-8px)}}
+.ln{transform-box:fill-box;transform-origin:left;animation:dbtype 4s infinite}.l2{animation-delay:.5s}.l3{animation-delay:1s}.l4{animation-delay:1.5s}
+@keyframes dbtype{0%{transform:scaleX(0)}35%,85%{transform:scaleX(1)}100%{transform:scaleX(0)}}
+.cur{animation:dbblink 1s steps(2) infinite}@keyframes dbblink{50%{opacity:0}}
+.blob,.gear,.star{transform-box:fill-box;transform-origin:center}
+.blob{animation:dbpulse 5s ease-in-out infinite}.b2{animation-delay:1s}@keyframes dbpulse{50%{transform:scale(1.08)}}
+.gear{animation:dbspin 6s linear infinite}@keyframes dbspin{to{transform:rotate(360deg)}}
+.star{animation:dbtw 2s ease-in-out infinite}.star.s2{animation-delay:.6s}.star.s3{animation-delay:1.2s}@keyframes dbtw{50%{opacity:.2;transform:scale(.5)}}
+.db-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.db-stat{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;display:flex;gap:12px;align-items:center;animation:dbup .5s both;transition:transform .2s,box-shadow .2s}
+.db-stat:hover{transform:translateY(-4px);box-shadow:0 10px 20px rgba(0,0,0,.08)}
+.db-ic{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
+.db-stat b{display:block;font-size:22px}.db-stat span{font-size:12px;color:#64748b}
+@keyframes dbup{from{opacity:0;transform:translateY(14px)}}
+.db-grid{display:grid;grid-template-columns:240px 1fr;gap:18px}
+.rg{fill:none;stroke-width:10;stroke-linecap:round}.rg.bg{stroke:#e2e8f0}.rg.fg{stroke:#2563eb;stroke-dasharray:326.7;stroke-dashoffset:326.7;transition:stroke-dashoffset 1.3s ease}
+.db-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:8px;cursor:pointer;animation:dbup .45s both;transition:.2s}
+.db-item:hover{transform:translateX(5px);border-color:#2563eb;background:#eff6ff}
+.db-chk{width:26px;height:26px;border-radius:50%;background:#e2e8f0;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.db-item.done .db-chk{background:#10b981;color:#fff}
+.db-tag{font-size:10px;font-weight:700;background:#f1f5f9;color:#475569;border-radius:6px;padding:2px 7px}
+.db-trophy{display:inline-block;animation:dbfloat 1s ease-in-out infinite}
+@media (max-width:760px){.db-hero{flex-direction:column}.db-art{max-width:80%}.db-stats{grid-template-columns:1fr 1fr}.db-grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.db-hero *,.db-stat,.db-item{animation:none!important}}
+</style>
+</head>
+<body>
+
+    <!-- SECURITY VIOLATION TOAST -->
+    <div id="securityToast">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Security Violation: Copy/Paste is disabled. You must type your code manually.</span>
+    </div>
+
+    <div id="adminLock" class="modal-overlay hidden" style="z-index:200"><div class="modal-content"><h3 id="adminLockTitle" style="font-size:16px;font-weight:700;margin-bottom:6px"></h3><p id="adminLockMsg" style="font-size:12px;color:#64748b;margin-bottom:12px"></p><input type="password" id="adminPinInput" placeholder="Faculty PIN" onkeydown="if(event.key==='Enter')submitAdminPin()"><div id="adminLockErr" style="color:#dc2626;font-size:11px;font-weight:600;margin-top:6px"></div><button type="button" onclick="submitAdminPin()" class="btn btn-primary" style="width:100%;margin-top:10px">Unlock</button></div></div>
+    <!-- FACULTY ADMIN WORKSPACE -->
+    <div id="adminPortalView" class="app-container hidden">
+        <header class="pro-card flex justify-between items-center" style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff;">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span style="background: #3b82f6; width: 10px; height: 10px; border-radius: 50%;"></span>
+                    <h1 style="font-size: 20px; font-weight: 700;">HITS Faculty Administration</h1>
+                </div>
+                <p style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Configure Courses, Semester, upload programs line-by-line, and deploy student practice links.</p>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="generateAndCopyStudentLink()" class="btn btn-primary" style="background: #10b981;">
+                    <i class="fa-solid fa-link"></i> Generate Student Link
+                </button>
+                <button type="button" onclick="document.getElementById('logImportInput').click()" class="btn btn-secondary"><i class="fa-solid fa-file-import"></i> Import Submissions</button><input type="file" id="logImportInput" accept=".json" multiple class="hidden" onchange="importStudentSubmissions(event)">
+                <button type="button" onclick="exportStudentLogsExcel()" class="btn btn-secondary">
+                    <i class="fa-solid fa-file-excel"></i> Export Logs
+                </button>
+            </div>
+        </header>
+
+        <div id="generatedLinkBanner" class="hidden pro-card" style="background: #ecfdf5; border-color: #6ee7b7;">
+            <p style="font-size: 13px; font-weight: 700; color: #065f46; margin-bottom: 8px;">
+                <i class="fa-solid fa-circle-check"></i> STUDENT PRACTICE URL READY:
+            </p>
+            <div class="flex gap-2">
+                <input type="text" id="generatedStudentUrlInput" readonly class="font-mono" style="font-size: 12px; background: #fff;">
+                <button type="button" onclick="copyGeneratedUrl()" class="btn btn-primary" style="background: #059669; white-space: nowrap;">
+                    <i class="fa-solid fa-copy"></i> Copy Link
+                </button>
+            </div>
+        </div>
+
+        <!-- COURSE CONFIGURATION CARD -->
+        <div class="pro-card">
+            <div class="flex justify-between items-center" style="margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <h2 style="font-size: 15px; font-weight: 700; color: #1e293b;">
+                    <i class="fa-solid fa-graduation-cap" style="color: var(--primary);"></i> Course &amp; Academic Configuration
+                </h2>
+                <div class="flex gap-2">
+                    <button type="button" onclick="openAddCourseModal()" class="btn btn-primary" style="font-size: 12px; padding: 7px 14px;">
+                        <i class="fa-solid fa-plus"></i> Add New Course
+                    </button>
+                    <button type="button" onclick="deleteActiveCourse()" class="btn btn-danger" style="font-size: 12px; padding: 7px 12px;">
+                        <i class="fa-solid fa-trash"></i> Delete Course
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-4 gap-3">
+                <div>
+                    <label>Select Active Course *</label>
+                    <select id="courseSelectDropdown" onchange="switchActiveCourse()"></select>
+                </div>
+                <div>
+                    <label>Degree Program</label>
+                    <select id="activeDegreeSelect" onchange="updateActiveCourseDetails()">
+                        <option value="BCA">BCA (Bachelor of Computer Applications)</option>
+                        <option value="MCA">MCA (Master of Computer Applications)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Semester</label>
+                    <select id="activeSemesterSelect" onchange="updateActiveCourseDetails()">
+                        <option value="SEMESTER – I">SEMESTER – I</option>
+                        <option value="SEMESTER – II" selected>SEMESTER – II</option>
+                        <option value="SEMESTER – III">SEMESTER – III</option>
+                        <option value="SEMESTER – IV">SEMESTER – IV</option>
+                        <option value="SEMESTER – V">SEMESTER – V</option>
+                        <option value="SEMESTER – VI">SEMESTER – VI</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Course Code</label>
+                    <input type="text" id="activeCourseCodeInput" onchange="updateActiveCourseDetails()" placeholder="e.g. BCA41001">
+                </div>
+            </div>
+            <div class="grid grid-2 gap-3" style="margin-top: 10px;">
+                <div>
+                    <label>Course Name</label>
+                    <input type="text" id="activeCourseNameInput" onchange="updateActiveCourseDetails()" placeholder="e.g. PROBLEM SOLVING &amp; PROGRAMMING LABORATORY">
+                </div>
+                <div>
+                    <label>Academic Year (Auto-Calculated / Editable)</label>
+                    <input type="text" id="activeAcaYearInput" onchange="updateActiveCourseDetails()" placeholder="e.g. 2025 – 2026">
+                </div>
+            </div>
+        </div>
+
+        <div class="pro-card">
+            <label>Compiler API endpoint (optional). Default: public Judge0 CE (https://ce.judge0.com). Use your own Judge0 or Piston server URL (a Piston URL must contain "piston") if the public one is blocked or rate-limited.</label>
+            <input type="text" id="compilerUrlInput" onchange="saveCompilerUrl()" placeholder="https://ce.judge0.com">
+        </div>
+
+        <div class="pro-card">
+            <label>College logo for the PDF record (upload the official PNG/JPG; it is shrunk automatically and included in the student link).</label>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:8px;">
+                <img id="logoPreview" alt="" style="height:48px;display:none;border:1px solid #e2e8f0;border-radius:6px;padding:2px;background:#fff;">
+                <input type="file" id="logoInput" accept="image/png,image/jpeg" onchange="handleLogoUpload(event)">
+                <button type="button" class="btn btn-secondary" onclick="clearLogo()">Use default</button>
+            </div>
+        </div>
+
+        <div class="pro-card">
+            <label>Google Sheet logging - Apps Script Web App URL (student activity is saved to your sheet automatically)</label>
+            <input type="text" id="sheetUrlInput" onchange="saveSheetCfg()" placeholder="https://script.google.com/macros/s/XXXX/exec">
+            <label style="margin-top:8px">Secret key (same as SECRET in the script)</label>
+            <input type="text" id="sheetKeyInput" onchange="saveSheetCfg()" placeholder="e.g. hits-lab-2026">
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                <button type="button" class="btn btn-secondary" onclick="copyAppsScript()"><i class="fa-regular fa-copy"></i> Copy Apps Script code</button>
+                <button type="button" class="btn btn-secondary" onclick="testSheet()"><i class="fa-solid fa-vial"></i> Send test row</button>
+            </div>
+            <p style="font-size:11px;color:#64748b;margin-top:6px">Sheet: Extensions &gt; Apps Script &gt; paste code &gt; Deploy &gt; Web app (Execute as Me, Access Anyone). Generate a new student link after saving.</p>
+        </div>
+
+        <!-- UPLOAD SECTION -->
+        <div class="grid grid-admin">
+            <div class="pro-card">
+                <h2 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #1e293b;">
+                    <i class="fa-solid fa-file-arrow-up" style="color: var(--primary);"></i> Upload Course Programs
+                </h2>
+                
+                <div onclick="triggerDocUpload()" style="border: 2px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; padding: 25px; text-align: center; cursor: pointer;">
+                    <i class="fa-solid fa-file-lines" style="font-size: 32px; color: var(--primary); margin-bottom: 8px;"></i>
+                    <p style="font-weight: 600; font-size: 13px;">Click to Upload Syllabus / Document</p>
+                    <p style="font-size: 11px; color: #64748b; margin-top: 3px;">Reads Word (.docx), Text (.txt), or Code files line-by-line</p>
+                </div>
+                <input type="file" id="docFileInput" accept=".docx,.txt,.c,.cpp,.java,.py,.sql,.json" onchange="handleDocumentUpload(event)" class="hidden">
+
+                <div style="margin-top: 15px;">
+                    <label>Or Paste Program Syllabus List (Line-by-Line):</label>
+                    <textarea id="documentTextArea" style="height: 110px; font-size: 12px; line-height: 1.5;" placeholder="1. Write a C program to read two numbers and find the largest number using an if-else statement.&#10;2. Write a program to read an integer and display it"></textarea>
+                    <button type="button" onclick="parseTextLineByLine()" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Parse Programs Line-by-Line
+                    </button>
+                </div>
+
+                <div style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                    <label>Add Single Program Manually:</label>
+                    <div class="flex flex-col gap-2">
+                        <input type="text" id="manualTitle" placeholder="Program Title (e.g. Find largest of two numbers)">
+                        <div class="grid grid-2 gap-2">
+                            <select id="manualLang">
+                                <option value="c">C (GCC)</option>
+                                <option value="cpp">C++ (G++)</option>
+                                <option value="java">Java</option>
+                                <option value="python">Python 3</option>
+                                <option value="sql">SQL (SQLite)</option>
+                            </select>
+                            <input type="text" id="manualTarget" placeholder="Expected Target Output (optional)">
+                        </div>
+                        <button type="button" onclick="addSingleProgramManual()" class="btn btn-primary" style="font-size: 12px;">
+                            <i class="fa-solid fa-plus"></i> Add Program
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pro-card flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center" style="margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                        <div>
+                            <h2 style="font-size: 15px; font-weight: 700; color: #1e293b;">Uploaded Program List</h2>
+                            <span id="activeCourseSubtext" style="font-size: 11px; color: #64748b;">Programs for active course</span>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <span id="programCountBadge" class="badge badge-blue">0 Programs</span>
+                            <button type="button" onclick="clearAllPrograms()" class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <div id="adminProgramList" style="max-height: 440px; overflow-y: auto;" class="flex flex-col gap-2"></div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px;">
+                    <p style="font-size: 11px; color: #64748b;"><i class="fa-solid fa-shield-halved"></i> <strong>Real Execution Guard:</strong> Unfilled specifiers (%d) and erroneous multiple branches will be rejected.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD COURSE -->
+    <div id="addCourseModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center" style="margin-bottom: 15px;">
+                <h3 style="font-size: 16px; font-weight: 700;"><i class="fa-solid fa-folder-plus" style="color: var(--primary);"></i> Add New Course</h3>
+                <button type="button" onclick="closeAddCourseModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+            <div class="flex flex-col gap-3">
+                <div>
+                    <label>Degree Program *</label>
+                    <select id="newCourseDegree">
+                        <option value="BCA">BCA (Bachelor of Computer Applications)</option>
+                        <option value="MCA">MCA (Master of Computer Applications)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Course Code *</label>
+                    <input type="text" id="newCourseCode" placeholder="e.g. BCA41002 or MCA21005">
+                </div>
+                <div>
+                    <label>Course Name *</label>
+                    <input type="text" id="newCourseName" placeholder="e.g. DATA STRUCTURES &amp; ALGORITHMS LAB">
+                </div>
+                <div class="flex justify-between items-center" style="margin-top: 10px;">
+                    <button type="button" onclick="closeAddCourseModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="button" onclick="saveNewCourse()" class="btn btn-primary"><i class="fa-solid fa-check"></i> Save Course</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STUDENT PORTAL -->
+    <div id="studentPortalView" class="hidden">
+        <div id="studentAuthModal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 15px;">
+            <div class="pro-card" style="width: 420px; max-width: 100%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
+                <div style="text-align: center; margin-bottom: 18px;">
+                    <div style="background: #eff6ff; color: var(--primary); width: 48px; height: 48px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 8px;">
+                        <i class="fa-solid fa-id-card"></i>
+                    </div>
+                    <h2 style="font-size: 18px; font-weight: 700;">Student Workspace Login</h2>
+                    <p style="font-size: 12px; color: #64748b;">No credentials required — enter your Register Number directly</p>
+                </div>
+
+                <form onsubmit="handleStudentLogin(event)" class="flex flex-col gap-3">
+                    <div>
+                        <label>Student Full Name *</label>
+                        <input type="text" id="sName" required placeholder="e.g. BALA M">
+                    </div>
+                    <div>
+                        <label>Register Number *</label>
+                        <input type="text" id="sIdentifier" required placeholder="e.g. 26su2460001 (or official email)">
+                        <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px; margin-top: 5px; font-size: 11px; color: #475569;">
+                            <i class="fa-solid fa-circle-check" style="color: #10b981;"></i> 
+                            Valid Register Numbers start with your batch prefix (e.g. <strong>26SU</strong> or <strong>26SP</strong>).
+                        </div>
+                    </div>
+                    
+                    <div id="loginError" style="color: #dc2626; font-size: 11px; font-weight: 600; display: none;"></div>
+
+                    <button type="submit" class="btn btn-primary" style="margin-top: 6px; padding: 10px;">
+                        Enter Compiler Workspace <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="studentDashboard" class="hidden app-container">
+            <div class="db-hero">
+                <div style="flex:1;min-width:0">
+                    <div id="dbLogo" style="margin-bottom:6px"></div>
+                    <p style="font-size:13px;color:#64748b">Welcome back 👋</p>
+                    <h1 id="dbName" style="font-size:26px;font-weight:800;margin:2px 0"></h1>
+                    <p id="dbCourse" style="font-size:13px;color:#475569"></p>
+                    <p id="dbMsg" style="font-size:14px;font-weight:600;color:#2563eb;margin:10px 0 14px"></p>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button type="button" class="btn btn-primary" onclick="openWorkspace(nextPendingIdx())"><i class="fa-solid fa-play"></i> Continue coding</button>
+                        <button type="button" class="btn btn-success" onclick="downloadDirectPDF()"><i class="fa-solid fa-file-arrow-down"></i> Download PDF</button>
+                        <button type="button" class="btn btn-secondary" onclick="downloadSubmissionFile()"><i class="fa-solid fa-paper-plane"></i> Submission File</button>
+                    </div>
+                </div>
+                <svg class="db-art" viewBox="0 0 320 230" aria-hidden="true">
+                    <circle class="blob" cx="160" cy="118" r="88" fill="#dbeafe"/><circle class="blob b2" cx="160" cy="118" r="64" fill="#bfdbfe"/>
+                    <g class="float">
+                        <rect x="85" y="72" width="150" height="96" rx="8" fill="#1e293b"/><rect x="93" y="80" width="134" height="80" rx="3" fill="#0f172a"/>
+                        <rect class="ln" x="101" y="90" width="70" height="6" rx="3" fill="#38bdf8"/><rect class="ln l2" x="111" y="103" width="90" height="6" rx="3" fill="#a78bfa"/>
+                        <rect class="ln l3" x="111" y="116" width="60" height="6" rx="3" fill="#34d399"/><rect class="ln l4" x="101" y="129" width="80" height="6" rx="3" fill="#fbbf24"/>
+                        <rect class="cur" x="188" y="128" width="5" height="9" fill="#fff"/><path d="M70 168h180l-12 14H82z" fill="#475569"/>
+                    </g>
+                    <g font-family="monospace" font-weight="700" font-size="26">
+                        <text class="fl" x="38" y="62" fill="#2563eb">{ }</text><text class="fl b" x="236" y="52" fill="#7c3aed">&lt;/&gt;</text>
+                        <text class="fl c" x="262" y="150" fill="#059669">;</text><text class="fl d" x="30" y="150" fill="#ea580c">#</text>
+                    </g>
+                    <circle class="gear" cx="268" cy="198" r="13" fill="none" stroke="#64748b" stroke-width="5" stroke-dasharray="5 4"/>
+                    <circle class="star" cx="60" cy="100" r="4" fill="#f59e0b"/><circle class="star s2" cx="285" cy="95" r="3" fill="#f59e0b"/><circle class="star s3" cx="150" cy="30" r="3.5" fill="#f59e0b"/>
+                </svg>
+            </div>
+            <div class="db-stats">
+                <div class="db-stat"><div class="db-ic" style="background:#2563eb"><i class="fa-solid fa-list-check"></i></div><div><b id="dbTotal">0</b><span>Programs</span></div></div>
+                <div class="db-stat" style="animation-delay:.08s"><div class="db-ic" style="background:#10b981"><i class="fa-solid fa-circle-check"></i></div><div><b id="dbDone">0</b><span>Completed</span></div></div>
+                <div class="db-stat" style="animation-delay:.16s"><div class="db-ic" style="background:#f59e0b"><i class="fa-solid fa-hourglass-half"></i></div><div><b id="dbPending">0</b><span>Pending</span></div></div>
+                <div class="db-stat" style="animation-delay:.24s"><div class="db-ic" style="background:#7c3aed"><i class="fa-solid fa-star"></i></div><div><b id="dbMarks">0</b><span>Auto marks</span></div></div>
+            </div>
+            <div class="db-grid">
+                <div class="pro-card" style="text-align:center">
+                    <h3 style="font-size:14px;font-weight:700;margin-bottom:8px">Overall progress</h3>
+                    <svg viewBox="0 0 120 120" width="160" height="160"><circle class="rg bg" cx="60" cy="60" r="52"/><circle id="dbRing" class="rg fg" cx="60" cy="60" r="52" transform="rotate(-90 60 60)"/><text id="dbPct" x="60" y="68" text-anchor="middle" font-size="24" font-weight="700" fill="#0f172a">0%</text></svg>
+                </div>
+                <div class="pro-card"><h3 style="font-size:14px;font-weight:700;margin-bottom:10px">Your exercises</h3><div id="dbList"></div></div>
+            </div>
+        </div>
+
+        <div id="studentMainContent" class="hidden app-container">
+            <header class="pro-card flex justify-between items-center" style="padding: 12px 18px;">
+                <div>
+                    <h1 style="font-size: 17px; font-weight: 700;" id="stCourseHeading">BCA41001 - Programming Lab</h1>
+                    <p style="font-size: 12px; color: #64748b;" id="stStudentIdentity">Logged in as: Student</p>
+                </div>
+                <div>
+                    <span id="integrityBadge" style="display:none;background:#fee2e2;color:#b91c1c;font-weight:700;font-size:12px;border-radius:999px;padding:6px 12px;margin-right:8px;"></span>
+                    <button type="button" onclick="showDashboard()" class="btn btn-secondary" style="font-size:13px;padding:9px 18px;margin-right:8px;"><i class="fa-solid fa-house"></i> Dashboard</button>
+                    <button type="button" onclick="downloadSubmissionFile()" class="btn btn-secondary" style="font-size:13px;padding:9px 18px;margin-right:8px;"><i class="fa-solid fa-paper-plane"></i> Submission File</button>
+                    <button id="downloadPdfBtn" type="button" onclick="downloadDirectPDF()" class="btn btn-success" style="font-size: 13px; padding: 9px 18px;">
+                        <i class="fa-solid fa-file-arrow-down"></i> Download PDF
+                    </button>
+                </div>
+            </header>
+
+            <div class="grid" style="grid-template-columns: var(--sidebar-w) 1fr; gap: 18px;">
+                <div class="pro-card" style="padding: 14px;">
+                    <div class="flex justify-between items-center" style="margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                        <h3 style="font-size: 13px; font-weight: 700; color: #1e293b;">Assigned Experiments</h3>
+                        <span id="stExerciseBadge" class="badge badge-gray">0 Items</span>
+                    </div>
+                    <div id="studentExerciseList" class="flex flex-col gap-2" style="max-height: 520px; overflow-y: auto;"></div>
+                </div>
+
+                <div id="ideContainer" class="ide-workspace theme-c">
+                    <div class="ide-topbar">
+                        <div class="ide-tabs">
+                            <div class="ide-tab active" id="ideActiveFileTab">
+                                <i id="ideTabIcon" class="fa-solid fa-code"></i>
+                                <span id="ideActiveFileName">main.c</span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 items-center">
+                            <span id="ideEnvBadge" style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(255,255,255,0.1); color: #cbd5e1;">GCC 10.2</span>
+                            <label style="font-size: 11px; color: #94a3b8; margin: 0;">Language:</label>
+                            <select id="codeLangSelect" onchange="switchProgramLang()" style="background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); width: auto; font-size: 12px; padding: 4px 8px;">
+                                <option value="c">C (GCC)</option>
+                                <option value="cpp">C++ (G++)</option>
+                                <option value="java">Java (OpenJDK)</option>
+                                <option value="python">Python 3</option>
+                                <option value="sql">SQL (SQLite3 Engine)</option>
+                            </select>
+                            <button id="runCodeBtn" type="button" onclick="executeStudentCode()" class="btn" style="background: #10b981; color: #fff; font-size: 12px; padding: 5px 12px;">
+                                <i class="fa-solid fa-play"></i> Run Code
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="padding: 7px 14px; background: rgba(37,99,235,0.15); border-bottom: 1px solid rgba(37,99,235,0.3); font-size: 11.5px; color: #93c5fd; display: flex; align-items: center; justify-content: space-between;">
+                        <span><i class="fa-solid fa-circle-question"></i> <strong>Target Problem:</strong> <span id="ideProblemPrompt">Select an experiment</span></span>
+                        <span style="font-size: 10.5px; opacity: 0.8;"><i class="fa-solid fa-lock"></i> Strict Mode: Typing Required &bull; Paste Disabled</span>
+                    </div>
+
+                    <div style="position: relative;">
+                        <textarea id="codeEditorArea" class="ide-editor-textarea" placeholder="// Type code from scratch..."></textarea>
+                    </div>
+
+                    <div class="ide-statusbar">
+                        <span id="ideStatusLeft"><i class="fa-solid fa-terminal"></i> Ready</span>
+                        <span>UTF-8 &nbsp;|&nbsp; LF &nbsp;|&nbsp; <span id="ideCursorPos">Ln 1, Col 1</span></span>
+                    </div>
+
+                    <div style="padding: 10px 14px; background: rgba(0,0,0,0.15); border-top: 1px solid rgba(255,255,255,0.06);">
+                        <label id="stdinLabel" style="font-size: 11px; color: #94a3b8; margin-bottom: 3px;">
+                            <i class="fa-solid fa-keyboard"></i> Standard Input (stdin for scanf / cin / input):
+                        </label>
+                        <input type="text" id="stdinInputBox" class="font-mono" style="background: rgba(0,0,0,0.3); color: #f8fafc; border: 1px solid rgba(255,255,255,0.15); padding: 6px 10px; font-size: 12px;" placeholder="Values for inputs (e.g. 8 9)">
+                    </div>
+
+                    <div style="background: #000000; padding: 12px 14px; border-top: 1px solid rgba(255,255,255,0.08);">
+                        <div class="flex justify-between items-center" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; font-size: 11px;">
+                            <span class="font-mono" style="color: #94a3b8;"><i class="fa-solid fa-square-terminal"></i> OUTPUT TERMINAL:</span>
+                            <span id="compilerStatusPill" style="font-weight: 700; color: #94a3b8;">NOT EVALUATED</span>
+                        </div>
+                        <pre id="terminalConsole" class="font-mono" style="font-size: 12px; margin-top: 8px; color: #e2e8f0; white-space: pre-wrap; min-height: 120px; max-height: 300px; overflow-y: auto;">Write code in the editor above, then click Run Code.</pre>
+                    </div>
+
+                    <div class="flex justify-between items-center" style="padding: 10px 14px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.06);">
+                        <button type="button" onclick="clearEditor()" class="btn btn-secondary" style="background: rgba(255,255,255,0.1); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.15); font-size: 11px; padding: 6px 11px;">
+                            <i class="fa-solid fa-eraser"></i> Clear Editor
+                        </button>
+                        <button type="button" onclick="saveActiveRecord()" class="btn btn-primary" style="background: #3b82f6; font-size: 12px; padding: 7px 16px;">
+                            <i class="fa-solid fa-circle-check"></i> Save to Lab Record
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ZERO-OFFSET PDF MOUNT CONTAINER -->
+    <div id="pdfMountContainer">
+        <div id="printableLabRecord"></div>
+    </div>
+
+    <script>
+        function calculateCurrentAcademicYear() {
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth();
+            return (currentMonth >= 5) ? `${currentYear} – ${currentYear + 1}` : `${currentYear - 1} – ${currentYear}`;
+        }
+
+        // ==================== ANTI-CHEAT SYSTEM: BLOCK COPY / PASTE ====================
+        const editorArea = document.getElementById("codeEditorArea");
+        const toast = document.getElementById("securityToast");
+
+        function triggerSecurityToast(msg) {
+            const text = msg || "Security Violation: Copy/Paste is disabled. You must type your code manually.";
+            logIntegrity(text);
+            toast.querySelector("span").textContent = text + (student ? ` (Recorded - warning #${integrityCount})` : '');
+            toast.style.display = "flex";
+            clearTimeout(toastTimer); toastTimer = setTimeout(() => { toast.style.display = "none"; }, 5000);
+        }
+
+        ['paste', 'copy', 'cut', 'drag', 'dragover', 'dragstart', 'drop'].forEach(eventType => {
+            editorArea.addEventListener(eventType, function(e) {
+                e.preventDefault();
+                triggerSecurityToast("Security Violation: " + eventType.toUpperCase() + " is disabled. Type your code!");
+                return false;
+            });
+        });
+
+        editorArea.setAttribute('autocomplete','off'); editorArea.setAttribute('autocorrect','off'); editorArea.setAttribute('autocapitalize','off'); editorArea.spellcheck = false;
+        let prevEditorValue = "";
+        editorArea.addEventListener('focus', function(){ prevEditorValue = this.value; });
+        editorArea.addEventListener('beforeinput', function(e){ if (/^insertFrom(Paste|Drop|Yank|PasteAsQuotation)$/.test(e.inputType || '')) { e.preventDefault(); triggerSecurityToast("Security Violation: PASTE is disabled. Type your code!"); } });
+        editorArea.addEventListener('input', function(){ if (this.value.length - prevEditorValue.length > 25) { this.value = prevEditorValue; triggerSecurityToast("Security Violation: large text insertion blocked. Type your code!"); } prevEditorValue = this.value; invalidateIfChanged(); });
+        editorArea.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            triggerSecurityToast("Right-click context menu is disabled in the compiler.");
+            return false;
+        });
+
+        editorArea.addEventListener('keydown', function(e) {
+            const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+            const key = e.key.toLowerCase();
+
+            if (isCtrlOrCmd && (key === 'v' || key === 'c' || key === 'x' || key === 'insert')) {
+                e.preventDefault();
+                triggerSecurityToast("Keyboard shortcuts are disabled! Type your code.");
+                return false;
+            }
+            if (e.shiftKey && (e.key === 'Insert' || key === 'insert')) {
+                e.preventDefault();
+                triggerSecurityToast("Paste shortcut disabled! Type your code.");
+                return false;
+            }
+
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4; prevEditorValue = this.value;
+            }
+        });
+
+        // ==================== STRICT SEMANTIC VALIDATOR ====================
+        function stripComments(code, lang) {
+            if (lang === 'python') return code.replace(/#.*$/gm, '');
+            if (lang === 'sql') return code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--.*$/gm, '');
+            return code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+        }
+        function analyzeCode(code, lang) {
+            const s = stripComments(code, lang).toLowerCase();
+            return { input: /\b(scanf|cin|input|scanner|gets|getchar|fgets|nextint|nextline|nextdouble)\b/.test(s), decision: /\b(if|switch)\b/.test(s), loop: /\b(for|while|do)\b/.test(s) };
+        }
+        function validateCodeAgainstProblem(problemTitle, code, lang) {
+            const title = problemTitle.toLowerCase();
+            const clean = stripComments(code, lang).toLowerCase();
+            if (!clean.trim()) return { valid: false, error: "Your code contains only comments." };
+            if (lang === 'c' || lang === 'cpp') {
+                if (!/\bmain\s*\(/.test(clean)) return { valid: false, error: "Missing required 'main()' function declaration." };
+            } else if (lang === 'java') {
+                if (!/\bclass\s+\w+/.test(clean) || !/\bmain\s*\(/.test(clean)) return { valid: false, error: "Missing required Java class or main method." };
+            } else if (lang === 'sql') {
+                return /\b(select|create|insert|update|delete|drop|alter)\b/.test(clean) ? { valid: true } : { valid: false, error: "No valid SQL query statement detected (e.g. SELECT, CREATE, INSERT)." };
+            }
+            const body = clean.replace(/"(?:\\.|[^"\\])*"/g, '""').replace(/'(?:\\.|[^'\\])*'/g, "''").replace(/^\s*#.*$/gm, '').replace(/^\s*(import|using|package)\b.*$/gm, '').replace(/<<|>>|->/g, ' ');
+            const a = analyzeCode(code, lang);
+            const hasLogic = /\b(int|float|double|char|long|short|string|bool|boolean|auto)\s+\*?\s*(?!main\b)[a-z_]\w*/.test(body) || /[^=!<>]=[^=]/.test(body) || /[+\-*\/%<>]/.test(body) || a.decision || a.loop;
+            if (!hasLogic && !a.input) return { valid: false, error: "Hardcoded output detected! You must declare variables, accept input, or implement logic." };
+            if (/\b(largest|greatest|maximum|biggest)\b/.test(title)) {
+                const cmp = /[<>]/.test(body), usesIf = /\bif\b/.test(body), needIf = /\bif\b/.test(title);
+                const ok = (usesIf && cmp) || (!needIf && (/\bmax\s*\(/.test(body) || (/\?/.test(body) && cmp)));
+                if (!ok) return { valid: false, error: "Largest number problem requires an if/if-else statement with comparison operators (> or <)." };
+            }
+            if (/\bread\b/.test(title) && /\binteger\b/.test(title) && !a.input) return { valid: false, error: "This problem requires reading input from the user (scanf / cin / input)." };
+            return { valid: true };
+        }
+
+        // ==================== LANGUAGE ENVIRONMENT CONFIGS ====================
+        const IDE_ENVIRONMENTS = {
+            c: { themeClass: "theme-c", fileName: "main.c", icon: "fa-solid fa-file-lines", badge: "GCC 10.2", placeholder: "// Type C program from scratch...\n", stdinNote: "Standard Input (stdin for scanf):" },
+            cpp: { themeClass: "theme-cpp", fileName: "main.cpp", icon: "fa-solid fa-file-code", badge: "G++ 10.2", placeholder: "// Type C++ program from scratch...\n", stdinNote: "Standard Input (stdin for cin):" },
+            java: { themeClass: "theme-java", fileName: "Main.java", icon: "fa-brands fa-java", badge: "OpenJDK 15", placeholder: "// Type Java code from scratch (class Main)...\n", stdinNote: "Standard Input (stdin for Scanner):" },
+            python: { themeClass: "theme-python", fileName: "main.py", icon: "fa-brands fa-python", badge: "Python 3.10", placeholder: "# Type Python code from scratch...\n", stdinNote: "Standard Input (stdin for input()):" },
+            sql: { themeClass: "theme-sql", fileName: "query.sql", icon: "fa-solid fa-database", badge: "SQLite 3.36", placeholder: "-- Type SQL queries from scratch...\n", stdinNote: "SQL Query Parameters:" }
+        };
+
+        function applyLanguageInterface(lang) {
+            const env = IDE_ENVIRONMENTS[lang] || IDE_ENVIRONMENTS.c;
+            const container = document.getElementById("ideContainer");
+            container.className = "ide-workspace " + env.themeClass;
+            document.getElementById("ideActiveFileName").textContent = env.fileName;
+            document.getElementById("ideTabIcon").className = env.icon;
+            document.getElementById("ideEnvBadge").textContent = env.badge;
+            document.getElementById("codeEditorArea").placeholder = env.placeholder;
+            document.getElementById("stdinLabel").innerHTML = `<i class="fa-solid fa-keyboard"></i> ${env.stdinNote}`;
+            document.getElementById("ideStatusLeft").innerHTML = `<i class="fa-solid fa-code"></i> ${lang.toUpperCase()} Mode Active`;
+        }
+
+        document.getElementById("codeEditorArea").addEventListener("keyup", updateCursorPos);
+        document.getElementById("codeEditorArea").addEventListener("click", updateCursorPos);
+        function updateCursorPos() {
+            const ta = document.getElementById("codeEditorArea");
+            const textLines = ta.value.substr(0, ta.selectionStart).split("\n");
+            const currentLine = textLines.length;
+            const currentColumn = textLines[textLines.length - 1].length + 1;
+            document.getElementById("ideCursorPos").textContent = `Ln ${currentLine}, Col ${currentColumn}`;
+        }
+
+        function safeCompress(dataObj) {
+            const jsonStr = JSON.stringify(dataObj);
+            if (window.LZString && typeof LZString.compressToEncodedURIComponent === 'function') {
+                try { return "LZ:" + LZString.compressToEncodedURIComponent(jsonStr); } catch(e) {}
+            }
+            return "B64:" + btoa(unescape(encodeURIComponent(jsonStr)));
+        }
+
+        function safeDecompress(rawStr) {
+            if (!rawStr) return null;
+            try {
+                if (rawStr.startsWith("LZ:") && window.LZString) {
+                    const decomp = LZString.decompressFromEncodedURIComponent(rawStr.substring(3));
+                    if (decomp) return JSON.parse(decomp);
+                }
+                if (rawStr.startsWith("B64:")) {
+                    return JSON.parse(decodeURIComponent(escape(atob(rawStr.substring(4)))));
+                }
+                if (window.LZString) {
+                    const decomp = LZString.decompressFromEncodedURIComponent(rawStr);
+                    if (decomp) return JSON.parse(decomp);
+                }
+                return JSON.parse(decodeURIComponent(escape(atob(rawStr))));
+            } catch(e) { return null; }
+        }
+
+        function copyTextToClipboard(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+            } else { fallbackCopy(text); }
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.left = "-9999px";
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try { document.execCommand('copy'); } catch (err) {}
+            document.body.removeChild(ta);
+        }
+
+        function getDefaultLogoHtml() {
+            return `
+            <div style="width: 100%; text-align: center; margin: 0 auto 10px auto;">
+                <table style="margin: 0 auto; border-collapse: collapse; border: none; text-align: left;">
+                    <tr>
+                        <td style="vertical-align: middle; padding-right: 12px; border: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="48" height="48">
+                                <g transform="translate(60, 60)">
+                                    <rect x="-8" y="-56" width="16" height="112" rx="3" fill="#f97316"/>
+                                    <rect x="-8" y="-56" width="16" height="112" rx="3" fill="#f97316" transform="rotate(30)"/>
+                                    <rect x="-8" y="-56" width="16" height="112" rx="3" fill="#f97316" transform="rotate(60)"/>
+                                    <rect x="-8" y="-56" width="16" height="112" rx="3" fill="#f97316" transform="rotate(90)"/>
+                                    <rect x="-8" y="-56" width="16" height="112" rx="3" fill="#f97316" transform="rotate(120)"/>
+                                    <rect x="-8" y="-56" width="16" height="112" rx="3" fill="#f97316" transform="rotate(150)"/>
+                                    <circle cx="0" cy="0" r="48" fill="#f97316"/>
+                                    <circle cx="0" cy="0" r="42" fill="#006837"/>
+                                    <circle cx="0" cy="0" r="41" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="3,3"/>
+                                    <circle cx="0" cy="0" r="27" fill="#f97316" stroke="#ffffff" stroke-width="1.5"/>
+                                    <path d="M -7 -14 Q 0 -20 5 -12 Q 10 -4 6 4 Q 2 12 -4 14 Q -12 6 -7 -14 Z" fill="#ffffff" opacity="0.95"/>
+                                    <text x="0" y="21" font-family="'Arial', sans-serif" font-size="6.5" font-weight="900" fill="#ffffff" text-anchor="middle">ESTD. 1985</text>
+                                </g>
+                            </svg>
+                        </td>
+                        <td style="vertical-align: middle; border: none;">
+                            <div style="font-family: 'Arial Black', Arial, sans-serif; font-size: 26px; font-weight: 900; color: #000000; letter-spacing: 0.5px; line-height: 1;">HINDUSTAN</div>
+                            <div style="font-family: 'Arial', sans-serif; font-size: 10px; font-weight: 800; color: #000000; letter-spacing: 0.8px; margin-top: 3px;">INSTITUTE OF TECHNOLOGY &amp; SCIENCE</div>
+                            <div style="font-family: 'Arial', sans-serif; font-size: 9px; font-weight: 700; color: #000000; letter-spacing: 0.5px; margin-top: 2px;">(DEEMED TO BE UNIVERSITY)</div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            `;
+        }
+
+        // ==================== STATE MANAGEMENT ====================
+        const defaultCourse = {
+            code: "BCA41001",
+            name: "PROBLEM SOLVING & PROGRAMMING LABORATORY",
+            degree: "BCA",
+            semester: "SEMESTER – II",
+            academicYear: calculateCurrentAcademicYear(),
+            programs: [
+                { title: "Write a C program to read two numbers and find the largest number using an if-else statement.", lang: "c", code: "", sampleInput: "8 9", expectedOutput: "9" },
+                { title: "Read an integer and display it", lang: "c", code: "", sampleInput: "42", expectedOutput: "42" },
+                { title: "Create Student Table and Query Tuples", lang: "sql", code: "", sampleInput: "", expectedOutput: "Aravind" }
+            ]
+        };
+
+        let coursesList = JSON.parse(localStorage.getItem('hits_master_courses') || 'null') || [defaultCourse];
+        let activeCourseIndex = 0;
+        let studentCourseData = null;
+        let student = null;
+        let activeIdx = 0;
+        let savedRecords = [];
+        let currentPassed = false;
+        let lastOutput = ""; let passedKey = "";
+
+        function persistCourses() {
+            localStorage.setItem('hits_master_courses', JSON.stringify(coursesList));
+        }
+
+        function getActiveCourse() { return studentCourseData || coursesList[activeCourseIndex] || coursesList[0]; }
+        function getDegreeFullTitle() { return (getActiveCourse().degree === 'MCA') ? "MASTER OF COMPUTER APPLICATIONS" : "BACHELOR OF COMPUTER APPLICATIONS"; }
+        function getDegreeShort() { return (getActiveCourse().degree === 'MCA') ? "MCA" : "BCA"; }
+
+        function startStudent(parsed) {
+            if (!parsed || !parsed.p) return false;
+            sheetCfg = (typeof parsed.gs === 'string' && SHEET_RE.test(parsed.gs)) ? { url: parsed.gs, key: String(parsed.gk || '').slice(0, 100) } : { url: '', key: '' }; customLogo = (typeof parsed.logo === 'string' && parsed.logo.length < 30000 && /^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(parsed.logo)) ? parsed.logo : ''; compilerOverride = (typeof parsed.api === 'string' && /^https?:\/\//i.test(parsed.api)) ? parsed.api : ''; studentCourseData = {
+                            code: (parsed.ci && parsed.ci.code) || "BCA41001",
+                            name: (parsed.ci && parsed.ci.name) || "PRACTICAL LAB",
+                            degree: (parsed.ci && parsed.ci.degree) || "BCA",
+                            semester: (parsed.ci && parsed.ci.semester) || "SEMESTER – II",
+                            academicYear: (parsed.ci && parsed.ci.academicYear) || calculateCurrentAcademicYear(),
+                            programs: sanitizePrograms(parsed.p)
+                        };
+                        document.getElementById('adminPortalView').classList.add('hidden');
+                        document.getElementById('studentPortalView').classList.remove('hidden');
+            return true;
+        }
+        window.onload = function() {
+            try {
+                const q = new URLSearchParams(window.location.search);
+                const dataParam = q.get('data'), g = q.get('g'), c = q.get('c');
+                if (dataParam) { if (startStudent(safeDecompress(dataParam))) return; }
+                else if (g && c) { loadShortLink(g, c); return; }
+            } catch (e) {}
+            document.getElementById('studentPortalView').classList.add('hidden');
+            requireAdminUnlock(initAdminView);
+        };
+
+        function renderCourseDropdown() {
+            const select = document.getElementById('courseSelectDropdown');
+            select.innerHTML = "";
+            coursesList.forEach((c, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = `[${c.degree}] ${c.code} - ${c.name}`;
+                if (idx === activeCourseIndex) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function switchActiveCourse() {
+            activeCourseIndex = parseInt(document.getElementById('courseSelectDropdown').value, 10) || 0;
+            renderActiveCourseForm();
+            renderAdminProgramList();
+        }
+
+        function renderActiveCourseForm() {
+            const c = getActiveCourse();
+            if (!c) return;
+            document.getElementById('activeDegreeSelect').value = c.degree || "BCA";
+            document.getElementById('activeSemesterSelect').value = c.semester || "SEMESTER – II";
+            document.getElementById('activeCourseCodeInput').value = c.code || "";
+            document.getElementById('activeCourseNameInput').value = c.name || "";
+            document.getElementById('activeAcaYearInput').value = c.academicYear || calculateCurrentAcademicYear();
+            document.getElementById('activeCourseSubtext').textContent = `Programs for: [${c.degree}] ${c.code}`;
+        }
+
+        function updateActiveCourseDetails() {
+            const c = getActiveCourse();
+            if (!c) return;
+            c.degree = document.getElementById('activeDegreeSelect').value || "BCA";
+            c.semester = document.getElementById('activeSemesterSelect').value || "SEMESTER – II";
+            c.code = document.getElementById('activeCourseCodeInput').value.trim() || "COURSE01";
+            c.name = document.getElementById('activeCourseNameInput').value.trim() || "PRACTICAL LAB";
+            c.academicYear = document.getElementById('activeAcaYearInput').value.trim() || calculateCurrentAcademicYear();
+            persistCourses();
+            renderCourseDropdown();
+        }
+
+        function openAddCourseModal() {
+            document.getElementById('newCourseCode').value = "";
+            document.getElementById('newCourseName').value = "";
+            document.getElementById('addCourseModal').classList.remove('hidden');
+        }
+
+        function closeAddCourseModal() { document.getElementById('addCourseModal').classList.add('hidden'); }
+
+        function saveNewCourse() {
+            const degree = document.getElementById('newCourseDegree').value;
+            const code = document.getElementById('newCourseCode').value.trim();
+            const name = document.getElementById('newCourseName').value.trim();
+            if (!code || !name) { alert("Please enter Course Code and Name!"); return; }
+
+            coursesList.push({ code, name, degree, semester: "SEMESTER – II", academicYear: calculateCurrentAcademicYear(), programs: [] });
+            activeCourseIndex = coursesList.length - 1;
+            persistCourses();
+            closeAddCourseModal();
+            renderCourseDropdown();
+            renderActiveCourseForm();
+            renderAdminProgramList();
+        }
+
+        function deleteActiveCourse() {
+            if (coursesList.length <= 1) { alert("You must have at least one course."); return; }
+            if (confirm("Delete this course?")) {
+                coursesList.splice(activeCourseIndex, 1);
+                activeCourseIndex = 0;
+                persistCourses();
+                renderCourseDropdown();
+                renderActiveCourseForm();
+                renderAdminProgramList();
+            }
+        }
+
+        function triggerDocUpload() { document.getElementById('docFileInput').click(); }
+
+        function handleDocumentUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (ext === 'docx') {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    mammoth.extractRawText({ arrayBuffer: evt.target.result }).then(res => processLineByLineText(res.value));
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(evt) { processLineByLineText(evt.target.result); };
+                reader.readAsText(file);
+            }
+            e.target.value = "";
+        }
+
+        function parseTextLineByLine() {
+            const text = document.getElementById('documentTextArea').value;
+            if (!text.trim()) { alert("Please paste the program text list first!"); return; }
+            processLineByLineText(text);
+            document.getElementById('documentTextArea').value = "";
+        }
+
+        function processLineByLineText(rawText) {
+            const c = getActiveCourse();
+            const lines = rawText.split(/\r?\n/);
+            let count = 0;
+
+            lines.forEach(rawLine => {
+                let line = rawLine.trim().replace(/^(?:ex(?:p)?\s*\d+|experiment\s*\d+|\d+)[\.\)\:\-]\s*/i, "").trim();
+                if (line.length < 4 || /^(page\s*\d+|syllabus|contents|index)$/i.test(line)) return;
+
+                let detectedLang = "c";
+                if (/(c\+\+|\bcpp\b)/i.test(line)) detectedLang = "cpp";
+                else if (/\bjava\b/i.test(line)) detectedLang = "java";
+                else if (/\bpython\b/i.test(line)) detectedLang = "python";
+                else if (/\b(sql|sqlite|mysql|database|dbms|query|queries|select|tuples?)\b/i.test(line) || /\b(create|alter|drop)\s+(a\s+)?table\b/i.test(line)) detectedLang = "sql";
+
+                c.programs.push({ title: line, lang: detectedLang, code: "", sampleInput: "", expectedOutput: "" });
+                count++;
+            });
+            persistCourses();
+            renderAdminProgramList();
+            alert(`Parsed and added ${count} programs successfully to ${c.code}!`);
+        }
+
+        function addSingleProgramManual() {
+            const title = document.getElementById('manualTitle').value.trim();
+            const lang = document.getElementById('manualLang').value;
+            const target = document.getElementById('manualTarget').value.trim();
+            if (!title) { alert("Please enter Program Title!"); return; }
+
+            const c = getActiveCourse();
+            c.programs.push({ title, lang, code: "", sampleInput: "", expectedOutput: target });
+            persistCourses();
+            document.getElementById('manualTitle').value = "";
+            document.getElementById('manualTarget').value = "";
+            renderAdminProgramList();
+        }
+
+        function renderAdminProgramList() {
+            const c = getActiveCourse();
+            const container = document.getElementById('adminProgramList');
+            container.innerHTML = "";
+            document.getElementById('programCountBadge').textContent = `${c.programs.length} Programs`;
+
+            if (c.programs.length === 0) {
+                container.innerHTML = `<p style="font-size:12px; color:#64748b; padding:10px; text-align:center;">No programs added yet. Upload or add above.</p>`;
+                return;
+            }
+
+            c.programs.forEach((p, idx) => {
+                container.innerHTML += `
+                    <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span style="font-weight: 600; font-size: 13px;">${idx + 1}. ${esc(p.title)}</span>
+                            <span class="badge badge-gray" style="margin-left: 6px;">${p.lang.toUpperCase()}</span>
+                        </div>
+                        <button type="button" onclick="removeProgram(${idx})" class="btn btn-danger" style="padding: 2px 7px; font-size: 11px;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>`;
+            });
+        }
+
+        function removeProgram(idx) { 
+            getActiveCourse().programs.splice(idx, 1); 
+            persistCourses();
+            renderAdminProgramList(); 
+        }
+
+        function clearAllPrograms() { 
+            if (confirm("Clear all programs?")) { 
+                getActiveCourse().programs = []; 
+                persistCourses();
+                renderAdminProgramList(); 
+            } 
+        }
+
+        function generateAndCopyStudentLink() {
+            updateActiveCourseDetails();
+            const c = getActiveCourse();
+            if (!c.programs || !c.programs.length) { 
+                alert("Please add at least one program to the course before generating a link!"); 
+                return; 
+            }
+
+            const payload = { 
+                ci: { 
+                    code: c.code, 
+                    name: c.name, 
+                    degree: c.degree, 
+                    semester: c.semester, 
+                    academicYear: c.academicYear 
+                }, 
+                p: c.programs,
+                api: (localStorage.getItem('hits_compiler_url') || '').trim() || undefined,
+                logo: (() => { const l = localStorage.getItem('hits_logo') || ''; return l && l.length <= 9000 ? l : undefined; })(),
+                gs: (localStorage.getItem('hits_sheet_url') || '').trim() || undefined,
+                gk: localStorage.getItem('hits_sheet_key') || undefined
+            };
+            
+            const compressed = safeCompress(payload);
+            const baseUrl = window.location.href.split('?')[0];
+            const url = `${baseUrl}?data=${encodeURIComponent(compressed)}`;
+            
+            if ((localStorage.getItem('hits_logo') || '').length > 9000) alert('Your saved logo is too large for the link, so it was left out. Upload the logo again - it is now shrunk automatically.');
+            if (url.length > 12000 && !(sheetOn() && sheetCfg.key)) alert('Warning: this link is very long (' + url.length + ' characters) and may break in some apps. Use fewer programs per course, or choose "Use default" for the logo.');
+            const finish = (u, msg) => {
+                document.getElementById('generatedStudentUrlInput').value = u;
+                document.getElementById('generatedLinkBanner').classList.remove('hidden');
+                copyTextToClipboard(u); alert(msg);
+            };
+            if (sheetOn() && sheetCfg.key) {
+                document.getElementById('generatedStudentUrlInput').value = 'Creating short link (can take up to 20 seconds)...';
+                document.getElementById('generatedLinkBanner').classList.remove('hidden');
+                makeShortLink(compressed, baseUrl).then(r => r.url ? finish(r.url, 'Short student link created and copied to clipboard!') : finish(url, 'Could not create a short link: ' + r.why + '\n\nThe long link was copied instead.'));
+            } else finish(url, "Student Practice Link generated and copied to clipboard!");
+        }
+
+        function copyGeneratedUrl() { 
+            copyTextToClipboard(document.getElementById('generatedStudentUrlInput').value); 
+            alert("Copied to clipboard!"); 
+        }
+
+        // ==================== STUDENT DIRECT LOGIN & WORKSPACE ====================
+        function handleStudentLogin(e) {
+            e.preventDefault();
+            const name = document.getElementById('sName').value.trim();
+            const rawInput = document.getElementById('sIdentifier').value.trim();
+            const errDiv = document.getElementById('loginError');
+            errDiv.style.display = 'none';
+
+            if (!name || !rawInput) { 
+                errDiv.style.display = 'block'; 
+                errDiv.textContent = 'Please enter your name and Register Number.'; 
+                return; 
+            }
+
+            let resolvedRegNo = rawInput.includes("@") ? rawInput.split("@")[0].toUpperCase() : rawInput.toUpperCase();
+            const isValidPrefix = /^[0-9]{2}[A-Z]{2}[0-9A-Z]{4,}$/.test(resolvedRegNo);
+
+            if (!isValidPrefix) {
+                errDiv.style.display = 'block';
+                errDiv.textContent = 'Invalid format! Register Number should start with your batch prefix (e.g. 26SU2460001).';
+                return;
+            }
+
+            student = { name, regNo: resolvedRegNo, rollNo: "" };
+            const c = getActiveCourse();
+            savedRecords = JSON.parse(localStorage.getItem(`hits_saved_${c.code}_${student.regNo}`) || '[]');
+
+            document.getElementById('studentAuthModal').classList.add('hidden');
+            document.getElementById('studentMainContent').classList.remove('hidden');
+            document.getElementById('stCourseHeading').textContent = `${c.code} - ${c.name} (${getDegreeShort()})`;
+            document.getElementById('stStudentIdentity').textContent = `Logged in as: ${student.name} (${student.regNo})`;
+
+            renderStudentExerciseList();
+            
+            if (c.programs && c.programs.length > 0) {
+                selectStudentExercise(0);
+            }
+            integrityCount = readLogs().filter(l => l.RegNo === student.regNo && l.Course === c.code && l.Action === 'SECURITY').length; updateIntegrityBadge();
+            addLog('LOGIN', 'LOGIN', null);
+            showDashboard();
+        }
+
+        function renderStudentExerciseList() {
+            const container = document.getElementById('studentExerciseList');
+            container.innerHTML = "";
+            const progs = getActiveCourse().programs || [];
+            document.getElementById('stExerciseBadge').textContent = `${progs.length} Items`;
+
+            if (progs.length === 0) {
+                container.innerHTML = `<p style="font-size:12px; color:#64748b; padding:10px;">No programs uploaded for this course.</p>`;
+                return;
+            }
+
+            progs.forEach((p, i) => {
+                const saved = savedRecords.find(r => r.title === p.title);
+                container.innerHTML += `
+                    <button type="button" onclick="selectStudentExercise(${i})" class="btn btn-secondary" style="width: 100%; text-align: left; justify-content: space-between; font-size: 12px; padding: 9px; background: ${i === activeIdx ? '#eff6ff' : '#fff'}; border-color: ${i === activeIdx ? 'var(--primary)' : 'var(--border-color)'};">
+                        <div style="max-width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <strong>${i + 1}. ${esc(p.title)}</strong>
+                            ${saved ? `<br><span style="color:#059669; font-size:10px;"><i class="fa-solid fa-circle-check"></i> Completed (${saved.date})</span>` : ''}
+                        </div>
+                        <span class="badge badge-gray">${p.lang.toUpperCase()}</span>
+                    </button>
+                `;
+            });
+        }
+
+        function selectStudentExercise(i) { 
+            activeIdx = i; 
+            renderStudentExerciseList(); 
+            loadActiveStudentExercise(); 
+        }
+
+        function loadActiveStudentExercise() {
+            const p = getActiveCourse().programs[activeIdx];
+            if (!p) return;
+
+            const sv0 = savedRecords.find(r => r.title === p.title); const startLang = (sv0 && sv0.lang) || p.lang || 'c'; document.getElementById('codeLangSelect').value = startLang;
+            applyLanguageInterface(startLang);
+            document.getElementById('stdinInputBox').value = p.sampleInput || "";
+            document.getElementById('ideProblemPrompt').textContent = `${activeIdx + 1}. ${p.title}`;
+
+            const saved = savedRecords.find(r => r.title === p.title);
+            if (saved) {
+                document.getElementById('codeEditorArea').value = saved.code;
+                document.getElementById('terminalConsole').textContent = `[SAVED COMPILER OUTPUT]:\n${saved.output}`;
+                document.getElementById('compilerStatusPill').textContent = "SAVED & PASSED";
+                document.getElementById('compilerStatusPill').style.color = "#34d399";
+                currentPassed = true;
+                lastOutput = saved.output; passedKey = keyNow();
+            } else {
+                document.getElementById('codeEditorArea').value = "";
+                document.getElementById('terminalConsole').textContent = `Problem: ${p.title}\n\n1. Type your code above.\n2. Click "Run Code". If inputs are needed, enter them in the prompt.`;
+                document.getElementById('compilerStatusPill').textContent = "NOT EVALUATED";
+                document.getElementById('compilerStatusPill').style.color = "#94a3b8";
+                currentPassed = false;
+                lastOutput = "";
+            }
+            updateCursorPos();
+        }
+
+        function switchProgramLang() {
+            const sel = document.getElementById('codeLangSelect').value;
+            getActiveCourse().programs[activeIdx].lang = sel; invalidateIfChanged();
+            applyLanguageInterface(sel);
+        }
+
+        function clearEditor() {
+            document.getElementById('codeEditorArea').value = "";
+            document.getElementById('terminalConsole').textContent = "Editor cleared.";
+            document.getElementById('compilerStatusPill').textContent = "NOT EVALUATED";
+            document.getElementById('compilerStatusPill').style.color = "#94a3b8";
+            currentPassed = false;
+            updateCursorPos();
+        }
+
+        // ==================== INTERACTIVE INPUT DETECTION ====================
+        function detectNeedsInput(code, lang) {
+            const lower = code.toLowerCase();
+            if (lang === 'c' || lang === 'cpp') {
+                return lower.includes("scanf") || lower.includes("cin") || lower.includes("getchar") || lower.includes("gets");
+            } else if (lang === 'java') {
+                return lower.includes("scanner") || lower.includes("nextint") || lower.includes("nextline") || lower.includes("readline");
+            } else if (lang === 'python') {
+                return lower.includes("input(");
+            }
+            return false;
+        }
+
+        // ==================== STRICT VERIFICATION ENGINE (CATCHES FORMAT ERRORS & WRONG ANSWERS) ====================
+        function verifyCorrectAnswer(title, inputs, rawOutput, expected, applyExpected, lang, code) {
+            const t = title.toLowerCase(), out = rawOutput.toLowerCase();
+            if ((lang === 'c' || lang === 'cpp') && !code.includes('%%') && /%(?:\d*\.?\d+)?l{0,2}[dsfcuip](?![a-z0-9])/i.test(rawOutput))
+                return { passed: false, reason: "Format specifier bug detected! Your output printed a literal '%d' / '%s' instead of the variable value. Check your printf statement." };
+            if (applyExpected && expected && String(expected).trim()) {
+                const n = s => String(s).toLowerCase().replace(/\s+/g, ' ').trim();
+                if (!n(rawOutput).includes(n(expected))) return { passed: false, reason: `Output mismatch: for the sample input the output should contain "${expected}".` };
+            }
+            const has = n => new RegExp('(^|[^\\d.\\-])' + escRe(String(n)) + '(?!\\d)').test(out);
+            if (/\b(largest|greatest|maximum|biggest)\b/.test(t)) {
+                const nums = inputs.map(Number).filter(n => !isNaN(n));
+                if (nums.length >= 2) {
+                    if ((out.match(/largest/g) || []).length > 1) return { passed: false, reason: "Logic Error: Multiple conditional branches executed! Both if and else branches printed. Check your if-else condition and brackets." };
+                    const mx = Math.max(...nums);
+                    if (!has(mx)) return { passed: false, reason: `Logic Error: Expected largest number to be ${mx}, but ${mx} was not found in the output.` };
+                }
+            }
+            if (/\b(even|odd)\b/.test(t)) {
+                const num = parseInt(inputs[0], 10);
+                if (!isNaN(num)) {
+                    const isEven = num % 2 === 0;
+                    if (isEven && out.includes("odd") && !out.includes("not odd")) return { passed: false, reason: `Logic Error: ${num} is EVEN, but program printed ODD.` };
+                    if (!isEven && out.includes("even") && !out.includes("not even")) return { passed: false, reason: `Logic Error: ${num} is ODD, but program printed EVEN.` };
+                }
+            }
+            if (/\bfactorial\b/.test(t)) {
+                const n = parseInt(inputs[0], 10);
+                if (!isNaN(n) && n >= 0 && n <= 12) {
+                    let f = 1; for (let i = 2; i <= n; i++) f *= i;
+                    if (!has(f)) return { passed: false, reason: `Mathematical Error: Factorial of ${n} is ${f}, but not found in output.` };
+                }
+            }
+            return { passed: true };
+        }
+
+        async function executeStudentCode() {
+            if (Date.now() - (window._lastRunAt || 0) < 4000) { document.getElementById('terminalConsole').textContent = 'Please wait a few seconds between runs (the shared compiler is busy).'; return; }
+            window._lastRunAt = Date.now();
+            const code = document.getElementById('codeEditorArea').value.trim();
+            const p = getActiveCourse().programs[activeIdx];
+            const consoleBox = document.getElementById('terminalConsole');
+            const statusPill = document.getElementById('compilerStatusPill');
+            const runBtn = document.getElementById('runCodeBtn');
+            const stdinBox = document.getElementById('stdinInputBox');
+            let rawStdin = stdinBox.value.trim();
+
+            if (!code) { 
+                alert("Please type your solution code before executing!"); 
+                return; 
+            }
+
+            const lang = document.getElementById('codeLangSelect').value || p.lang || 'c'; const runKey = keyNow();
+
+            // 1. SEMANTIC STRUCTURAL VALIDATION
+            const validation = validateCodeAgainstProblem(p.title, code, lang);
+            if (!validation.valid) {
+                consoleBox.textContent = `[SEMANTIC VALIDATION ERROR]:\n❌ CODE DOES NOT MATCH PROBLEM STATEMENT:\n${validation.error}\n\nPlease implement the actual algorithmic solution for: "${p.title}".`;
+                statusPill.textContent = "INVALID PROBLEM LOGIC"; addLog("RUN","INVALID PROBLEM LOGIC",p);
+                statusPill.style.color = "#f87171";
+                currentPassed = false;
+                return;
+            }
+
+            // 2. INTERACTIVE INPUT PROMPT IF MISSING
+            if (detectNeedsInput(code, lang) && !rawStdin) {
+                consoleBox.textContent = `[TERMINAL PROMPT]:\n⚠️ Program is waiting for keyboard input...\nPlease enter input values.`;
+                
+                const defaultSample = p.sampleInput || "8 9";
+                const promptedVal = askPrompt(`[${p.title}]\nYour program requires input.\nEnter value(s) separated by space:`, defaultSample);
+                if (promptedVal !== null && promptedVal.trim()) {
+                    rawStdin = promptedVal.trim();
+                    stdinBox.value = rawStdin;
+                } else {
+                    consoleBox.textContent += `\n❌ Execution halted: No input provided for scanf/cin/input.`;
+                    statusPill.textContent = "WAITING FOR INPUT";
+                    statusPill.style.color = "#f59e0b";
+                    return;
+                }
+            }
+
+            runBtn.disabled = true;
+            runBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Running...`;
+            consoleBox.textContent = "Executing code in compiler sandbox with input values...";
+
+            const formattedStdin = rawStdin ? rawStdin.split(/[\s,]+/).join("\n") + "\n" : "";
+
+            const pistonLangs = { 
+                'c': { language: 'c', version: '*' }, 
+                'cpp': { language: 'cpp', version: '*' }, 
+                'java': { language: 'java', version: '*' }, 
+                'python': { language: 'python', version: '*' }, 
+                'sql': { language: 'sqlite3', version: '*' } 
+            };
+            const fileNames = { 'c': 'main.c', 'cpp': 'main.cpp', 'java': 'Main.java', 'python': 'main.py', 'sql': 'query.sql' };
+
+            let output = "";
+            let compileError = ""; let serviceError = ""; let runtimeFailed = false;
+
+            try {
+                const target = pistonLangs[lang];
+                const ctrl = new AbortController(); const tmo = setTimeout(() => ctrl.abort(), 70000);
+                const api = getCompilerUrl().replace(/\/+$/, '');
+                const bad = r => { serviceError = 'Compiler service returned HTTP ' + r.status + (r.status === 429 ? ' (rate limit - wait a few seconds and run again)' : (r.status === 401 || r.status === 403) ? ' (access denied - this server needs authorization; faculty should set another compiler endpoint)' : '') + '.'; };
+                if (/piston/i.test(api)) {
+                    const res = await fetch(api, { signal: ctrl.signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ language: target.language, version: target.version, files: [{ name: fileNames[lang], content: code }], stdin: formattedStdin }) });
+                    clearTimeout(tmo);
+                    if (!res.ok) bad(res); else {
+                        const data = await res.json();
+                        if (data.compile && data.compile.code) { compileError = (data.compile.stderr || data.compile.output || 'Compilation failed.').trim(); }
+                        else if (data.run) { output = (data.run.stdout || '').trim(); if (data.run.code) runtimeFailed = true; if (data.run.stderr) compileError = data.run.stderr.trim(); }
+                        else if (data.message) { compileError = data.message; }
+                    }
+                } else {
+                    const b64 = s => btoa(unescape(encodeURIComponent(s || '')));
+                    const unb64 = s => s ? decodeURIComponent(escape(atob(s))) : '';
+                    const lid = await judge0LangId(api, lang);
+                    const res = await fetchRetry(api + '/submissions?base64_encoded=true&wait=true', { signal: ctrl.signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ language_id: lid, source_code: b64(code), stdin: b64(formattedStdin) }) });
+                    clearTimeout(tmo);
+                    if (!res.ok) bad(res); else {
+                        const d = await res.json(), sid = d.status ? d.status.id : 0;
+                        output = unb64(d.stdout).trim();
+                        if (sid === 6) compileError = (unb64(d.compile_output) || 'Compilation failed.').trim();
+                        else if (sid === 5) compileError = 'Time limit exceeded - check for an infinite loop or missing input.';
+                        else if (sid >= 7 && sid <= 12) { runtimeFailed = true; compileError = (unb64(d.stderr) || unb64(d.message) || (d.status && d.status.description) || 'Runtime error').trim(); }
+                        else if (sid >= 13) serviceError = 'Compiler service error: ' + ((d.status && d.status.description) || 'internal error');
+                    }
+                }
+            } catch(e) {
+                serviceError = (e && e.name === "AbortError") ? "Compiler request timed out." : "Could not reach the compiler service (" + ((e && e.message) || "network error") + ").";
+            }
+
+            runBtn.disabled = false;
+            runBtn.innerHTML = `<i class="fa-solid fa-play"></i> Run Code`;
+
+            // Syntax/Compiler error catch
+            if (serviceError && !output && !compileError) {
+                consoleBox.textContent = `[COMPILER SERVICE UNAVAILABLE]:\n${serviceError}\nCheck your internet connection or ask faculty to set a different compiler endpoint.`;
+                statusPill.textContent = "COMPILER UNAVAILABLE"; statusPill.style.color = "#f59e0b";
+                currentPassed = false; addLog('RUN', 'COMPILER UNAVAILABLE', p); return;
+            }
+            if (compileError && (!output || runtimeFailed)) {
+                consoleBox.textContent = `[SYNTAX / COMPILER ERROR]:\n${compileError}`;
+                statusPill.textContent = "SYNTAX ERROR"; addLog("RUN","SYNTAX ERROR",p);
+                statusPill.style.color = "#f87171";
+                currentPassed = false;
+                return;
+            }
+
+            if (!output) {
+                consoleBox.textContent = `[EXECUTION FAILED]:\nNo output was generated by the program. Check your logic and variable print statements.`;
+                statusPill.textContent = "NO OUTPUT"; addLog("RUN","NO OUTPUT",p);
+                statusPill.style.color = "#f87171";
+                currentPassed = false;
+                return;
+            }
+
+            // 3. STRICT ANSWER & EXECUTION VERIFICATION
+            const inputTokens = rawStdin.trim().split(/[\s,]+/).filter(Boolean);
+            const norm = s => String(s || '').trim().split(/[\s,]+/).join(' ');
+            const applyExpected = !p.sampleInput || norm(p.sampleInput) === norm(rawStdin);
+            const answerTest = verifyCorrectAnswer(p.title, inputTokens, output, p.expectedOutput, applyExpected, lang, code);
+
+            if (!answerTest.passed) {
+                showRunResult(consoleBox, rawStdin, output, false, answerTest.reason + '  Please fix the bug in your code logic.');
+                statusPill.textContent = "FAILED"; addLog("RUN","FAILED",p);
+                statusPill.style.color = "#f87171";
+                currentPassed = false;
+                return;
+            }
+
+            // SUCCESS
+            lastOutput = output;
+            showRunResult(consoleBox, rawStdin, lastOutput, true, 'Program logic verified for "' + p.title + '". Click "Save to Lab Record".');
+            statusPill.textContent = "PASSED"; passedKey = runKey; addLog("RUN","PASSED",p);
+            statusPill.style.color = "#10b981";
+            currentPassed = true;
+        }
+
+        function saveActiveRecord() {
+            if (!currentPassed || passedKey !== keyNow()) { 
+                alert("Please click 'Run Code' and get a PASSED evaluation on your current code before saving!"); 
+                return; 
+            }
+
+            const c = getActiveCourse();
+            const p = c.programs[activeIdx];
+            const dateStr = new Date().toLocaleDateString('en-GB');
+
+            const entry = { 
+                title: p.title, 
+                code: document.getElementById('codeEditorArea').value, 
+                output: lastOutput, attempts: countRunLogs(p.title), violations: countViolations(p.title), 
+                lang: document.getElementById('codeLangSelect').value || p.lang || 'c', 
+                date: dateStr 
+            };
+            
+            const existingIdx = savedRecords.findIndex(r => r.title === p.title);
+            if (existingIdx >= 0) savedRecords[existingIdx] = entry; 
+            else savedRecords.push(entry);
+
+            localStorage.setItem(`hits_saved_${c.code}_${student.regNo}`, JSON.stringify(savedRecords));
+            renderStudentExerciseList();
+            addLog("SAVED","SAVED",p); queueRecord(p.title);
+            alert(`Program "${p.title}" saved successfully to your lab record!`);
+        }
+
+        function generateProcedureFromCode(code, lang) {
+            const s = stripComments(code, lang).toLowerCase(), st = ["Start the program."];
+            if (lang === 'sql') {
+                st[0] = "Start the SQLite session.";
+                if (/\bcreate\s+table\b/.test(s)) st.push("Create the required table(s) using CREATE TABLE.");
+                if (/\binsert\b/.test(s)) st.push("Insert the records using INSERT.");
+                if (/\bupdate\b/.test(s)) st.push("Modify records using UPDATE.");
+                if (/\bdelete\b/.test(s)) st.push("Remove records using DELETE.");
+                if (/\bselect\b/.test(s)) st.push("Retrieve the required tuples using SELECT.");
+                st.push("Display the result set.");
+            } else {
+                const a = analyzeCode(code, lang);
+                st.push("Declare the required variables.");
+                if (a.input) st.push("Read the input value(s) from the user.");
+                if (a.decision) st.push("Check the condition(s) using if / switch and select the proper branch.");
+                if (a.loop) st.push("Repeat the required statements using a loop until the condition fails.");
+                st.push("Compute the required result.", "Display the output.");
+            }
+            st.push("Stop.");
+            return st.map((x, i) => `${i + 1}. ${x}`).join('\n');
+        }
+
+        let fcSeq = 0;
+        const FLOW_DARK = true; // true = dark panel like the reference picture; false = white background (saves ink)
+        function generatePureSvgFlowchart(code, lang) {
+            const a = analyzeCode(code, lang), hasElse = /\belse\b/.test(stripComments(code, lang).toLowerCase());
+            const id = 'fc' + (++fcSeq), W = 350, cx = 175, G = 26, LX = 65, RX = 295, dk = FLOW_DARK;
+            const ink = dk ? '#fff' : '#222', bg = dk ? '#404040' : '#fff';
+            let g = '', y = 14;
+            const T = (x, yy, s, col, fs) => `<text x="${x}" y="${yy}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${fs || 10}" font-weight="700" fill="${col}">${s}</text>`;
+            const line = (pts, arrow) => `<polyline points="${pts.join(' ')}" fill="none" stroke="${ink}" stroke-width="3.5" stroke-linejoin="round"${arrow ? ` marker-end="url(#${id})"` : ''}/>`;
+            const down = () => { g += line([`${cx},${y}`, `${cx},${y + G}`], true); y += G; };
+            const term = l => { g += `<rect x="${cx - 46}" y="${y}" width="92" height="26" rx="13" fill="#36e2d0" stroke="${dk ? '#fff' : '#0f5e57'}" stroke-width="2"/>` + T(cx, y + 17, l, '#0f5e57'); y += 26; };
+            const box = (l, x, w, yy) => { g += `<rect x="${x - w / 2}" y="${yy}" width="${w}" height="28" fill="#fff"${dk ? '' : ' stroke="#222" stroke-width="1.5"'}/>` + T(x, yy + 18, l, '#444', 9); };
+            const proc = l => { box(l, cx, 150, y); y += 28; };
+            const dia = l => { g += `<polygon points="${cx},${y} ${cx + 52},${y + 27} ${cx},${y + 54} ${cx - 52},${y + 27}" fill="#f0911f"/>` + T(cx, y + 31, l, '#fff', 8.5); };
+            const lab = (x, yy, s) => T(x, yy, s, ink, 9);
+            term('START'); down();
+            if (lang === 'sql') { proc('CONNECT TO DATABASE'); down(); proc('EXECUTE SQL QUERY'); down(); proc('DISPLAY RESULT SET'); }
+            else {
+                proc(a.input ? 'READ INPUT VALUES' : 'INITIALIZE VARIABLES'); down();
+                if (a.decision) {
+                    const top = y, mid = y + 27; dia('CONDITION?'); y += 54;
+                    g += lab(cx + 16, y + 14, 'Yes') + lab(LX + 52, mid - 6, 'No');
+                    const bt = y + G, bb = bt + 28, ym = bb + 18;
+                    g += line([`${cx},${y}`, `${cx},${bt}`], true) + line([`${cx - 52},${mid}`, `${LX},${mid}`, `${LX},${bt}`], hasElse);
+                    box('TRUE PART', cx, 100, bt);
+                    if (hasElse) box('ELSE PART', LX, 100, bt);
+                    g += line([`${cx},${bb}`, `${cx},${ym}`]) + line([`${LX},${hasElse ? bb : bt}`, `${LX},${ym}`, `${cx},${ym}`]);
+                    y = ym; down();
+                }
+                if (a.loop) {
+                    const top = y, mid = y + 27; dia('LOOP TEST?'); y += 54;
+                    g += lab(cx + 16, y + 14, 'No') + lab(cx + 64, mid - 6, 'Yes');
+                    g += line([`${cx + 52},${mid}`, `${RX - 45},${mid}`], true); box('LOOP BODY', RX, 90, mid - 14);
+                    g += line([`${RX},${mid - 14}`, `${RX},${top - 13}`, `${cx},${top - 13}`], true);
+                    down();
+                }
+                if (!a.decision && !a.loop) { proc('PROCESS / COMPUTE'); down(); }
+                proc('DISPLAY OUTPUT');
+            }
+            down(); term('END');
+            const H = y + 14, sc = Math.min(330 / W, 340 / H);
+            const defs = `<defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M1 1 L8 5 L1 9" fill="none" stroke="${ink}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>`;
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${Math.round(W * sc)}" height="${Math.round(H * sc)}" style="display:block;margin:0 auto;">${defs}<rect width="${W}" height="${H}" rx="10" fill="${bg}"/>${g}</svg>`;
+        }
+
+        // ==================== ASSEMBLE ZERO-PAGE-OVERFLOW DOCUMENT ====================
+        function buildPrintableDocumentHtml() {
+            const logoSvg = getCollegeLogoHtml();
+            const c = getActiveCourse();
+            const acaYear = c.academicYear || calculateCurrentAcademicYear();
+            const semester = c.semester || "SEMESTER – II";
+            let pg = 5; const pageStarts = savedRecords.map(rc => { const s = pg; const n = String(rc.code || '').split('\n').length + String(rc.output || '').split('\n').length; pg += 1 + Math.ceil(Math.max(0, n - ((analyzeCode(rc.code, rc.lang).decision || analyzeCode(rc.code, rc.lang).loop) ? 26 : 34)) / 65); return s; });
+
+            return `
+                <div class="pdf-a4-page" style="text-align: center; font-family: 'Times New Roman', serif;">
+                    <div style="margin-top: 15px; margin-bottom: 25px;">${logoSvg}</div>
+                    <p style="font-size: 14pt; font-weight: bold; margin-top: 35px;">DEPARTMENT OF COMPUTER APPLICATIONS</p>
+                    <p style="font-size: 14pt; font-weight: bold; margin-top: 6px;">${getDegreeFullTitle()}</p>
+                    <p style="font-size: 12pt; font-weight: bold; margin-top: 35px;">(${esc(semester)})</p>
+                    <h2 style="font-size: 16pt; font-weight: bold; margin-top: 15px;">${esc(c.code)} – ${esc(c.name)}</h2>
+                    <p style="font-size: 13pt; font-weight: bold; margin-top: 10px;">Integrated Practical Lab Record</p>
+
+                    <div style="border: 2px solid #000; padding: 24px 32px; margin: 80px auto 0 auto; width: 460px; text-align: left; line-height: 2.2; font-size: 12.5pt; font-weight: bold;">
+                        <p style="margin:0;">Name &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${esc(student.name)}</p>
+                        <p style="margin:0;">Register No &nbsp;&nbsp;&nbsp;: ${esc(student.regNo)}</p>
+                        <p style="margin:0;">Degree &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${getDegreeShort()}</p>
+                        <p style="margin:0;">Academic Year : ${esc(acaYear)}</p>
+                    </div>
+                </div>
+
+                <div class="pdf-a4-page" style="font-family: 'Times New Roman', serif;">
+                    <div style="text-align: center; margin-top: 15px;">
+                        <div style="margin-bottom: 20px;">${logoSvg}</div>
+                        <p style="font-size: 14pt; font-weight: bold; margin-top: 25px; letter-spacing: 0.5px;">DEPARTMENT OF COMPUTER APPLICATIONS</p>
+                        <p style="font-size: 14pt; font-weight: bold; margin-top: 6px; letter-spacing: 0.5px;">${getDegreeFullTitle()}</p>
+                        <p style="font-size: 12pt; font-weight: bold; margin-top: 6px;">(${esc(semester)})</p>
+                        <h2 style="font-size: 18pt; font-weight: bold; margin-top: 35px; margin-bottom: 25px; text-decoration: underline;">Bonafide Certificate</h2>
+                    </div>
+
+                    <p style="font-size: 13pt; line-height: 2.3; text-align: justify; margin: 45px auto 0 auto; width: 100%;">
+                        This is to certify that this is a bonafide record of work done by <strong>${esc(student.name)}</strong> 
+                        (Register Number: <strong>${esc(student.regNo)}</strong>) of <strong>${getDegreeShort()}</strong> class, 
+                        submitted for the End Semester Practical Examination held on ____________________ 
+                        in <strong>${esc(c.code)} – ${esc(c.name)}</strong> during the academic year <strong>${esc(acaYear)}</strong>.
+                    </p>
+                    
+                    <div style="margin-top: 180px; width: 100%; display: flex; justify-content: space-between; text-align: center; font-weight: bold; font-size: 11.5pt;">
+                        <div style="width: 170px;"><p style="border-top: 1.5px solid #000; padding-top: 6px; margin: 0;">Staff In-Charge</p></div>
+                        <div style="width: 170px;"><p style="border-top: 1.5px solid #000; padding-top: 6px; margin: 0;">Internal Examiner</p></div>
+                        <div style="width: 170px;"><p style="border-top: 1.5px solid #000; padding-top: 6px; margin: 0;">External Examiner</p></div>
+                    </div>
+                </div>
+
+                <div class="pdf-a4-page" style="font-family: 'Times New Roman', serif;">
+                    <h2 style="text-align: center; font-size: 14pt; font-weight: bold; margin-top: 15px; margin-bottom: 25px;">${esc(c.name)} – RECORD INDEX</h2>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10pt;" border="1">
+                        <thead>
+                            <tr style="background: #f1f5f9;">
+                                <th style="padding: 9px; width: 8%; text-align: center;">S.NO</th>
+                                <th style="padding: 9px; width: 16%; text-align: center;">DATE</th>
+                                <th style="padding: 9px; text-align: left;">NAME OF THE EXPERIMENT</th>
+                                <th style="padding: 9px; width: 14%; text-align: center;">PAGE No.</th>
+                                <th style="padding: 9px; width: 22%; text-align: center;">SIGNATURE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${savedRecords.map((rec, i) => `
+                                <tr>
+                                    <td style="padding: 9px; text-align: center;">${i + 1}</td>
+                                    <td style="padding: 9px; text-align: center;">${esc(rec.date)}</td>
+                                    <td style="padding: 9px; text-align: left;">${esc(rec.title)} [${rec.lang.toUpperCase()}]</td>
+                                    <td style="padding: 9px; text-align: center;">${pageStarts[i]}</td>
+                                    <td style="padding: 9px;"></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pdf-a4-page" style="font-family: 'Times New Roman', serif;">
+                    <div style="margin-bottom:12px;">${logoSvg}</div>
+                    <h2 style="text-align: center; font-size: 14pt; font-weight: bold; margin-top: 5px; margin-bottom: 20px;">STAFF EVALUATION SHEET</h2>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9.5pt;" border="1">
+                        <thead>
+                            <tr style="background: #f1f5f9;">
+                                <th style="padding: 8px; width: 8%; text-align: center;">S.NO</th>
+                                <th style="padding: 8px; text-align: left;">PROGRAM TITLE</th>
+                                <th style="padding: 8px; width: 12%; text-align: center;">AIM (2)</th>
+                                <th style="padding: 8px; width: 14%; text-align: center;">ALGORITHM (2)</th>
+                                <th style="padding: 8px; width: 14%; text-align: center;">PROGRAM (4)</th>
+                                <th style="padding: 8px; width: 12%; text-align: center;">OUTPUT (2)</th>
+                                <th style="padding: 8px; width: 12%; text-align: center;">TOTAL (10)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${savedRecords.map((rec, i) => `
+                                <tr>
+                                    <td style="padding: 8px; text-align: center;">${i + 1}</td>
+                                    <td style="padding: 8px; text-align: left;">${esc(rec.title)}</td>
+                                    ${markCells(rec)}
+                                </tr>
+                            `).join('')}
+                        <tr style="background:#f1f5f9;font-weight:bold;"><td colspan="6" style="padding:8px;text-align:right;">TOTAL (out of ${savedRecords.length * 10})</td><td style="padding:8px;text-align:center;">${savedRecords.reduce((s, r) => s + computeMarks(r).total, 0)}</td></tr>
+                            <tr><td colspan="7" style="padding:6px;font-size:8pt;font-style:italic;">Marks are auto-computed from the student's recorded executions (correctness, attempts, program logic and integrity) and are subject to staff verification.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                ${savedRecords.map((rec, i) => `
+                    <div class="pdf-a4-page" style="font-family: 'Times New Roman', serif;">
+                        <h3 style="font-size: 13pt; font-weight: bold; margin-bottom: 8px;">${i+1}. ${esc(rec.title)}</h3>
+                        <p style="font-weight: bold; margin-top: 8px; font-size: 11pt;">Aim:</p>
+                        <p style="margin-bottom: 6px; font-size: 10.5pt;">To write and execute a program in ${rec.lang.toUpperCase()} to implement ${esc(rec.title.toLowerCase())} and verify target output.</p>
+                        
+                        <table style="width:100%;border-collapse:collapse;margin:6px 0 4px 0;border:none;"><tr>
+                            <td style="width:44%;vertical-align:top;padding-right:10px;border:none;">
+                                <p style="font-weight:bold;font-size:11pt;margin:0 0 4px 0;">Procedure / Algorithm:</p>
+                                <pre style="font-family:'Times New Roman',serif;white-space:pre-wrap;font-size:9.5pt;line-height:1.4;margin:0;">${generateProcedureFromCode(rec.code, rec.lang)}</pre>
+                            </td>
+                            <td style="width:56%;vertical-align:top;text-align:center;border:none;">
+                                <p style="font-weight:bold;font-size:11pt;margin:0 0 4px 0;text-align:left;">Flowchart:</p>
+                                ${generatePureSvgFlowchart(rec.code, rec.lang)}
+                            </td></tr></table>
+
+                        <p style="font-weight: bold; margin-top: 8px; font-size: 11pt;">Program Code:</p>
+                        <pre style="background: transparent; padding: 8px; font-size: 8.5pt; border: 1px solid #000; white-space: pre-wrap; font-family: 'Courier New', monospace; ">${esc(rec.code)}</pre>
+                        
+                        <p style="font-weight: bold; margin-top: 8px; font-size: 11pt;">Output:</p>
+                        <pre style="background: transparent; padding: 8px; font-size: 8.5pt; border: 1px solid #000; white-space: pre-wrap; font-family: 'Courier New', monospace; ">${esc(rec.output)}</pre>
+                        
+                        <p style="font-weight: bold; margin-top: 8px; font-size: 11pt;">Result:</p>
+                        <p style="margin-bottom: 15px; font-size: 10.5pt;">Thus, the program was executed successfully and the output was verified.</p>
+                        <div class="record-footer">Student Name: ${esc(student.name)} | Register No: ${esc(student.regNo)} | Completed: ${esc(rec.date)}</div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        async function downloadDirectPDF() {
+            if (!savedRecords.length) { alert("Please save at least one completed program before downloading the record!"); return; }
+
+            const downloadBtn = document.getElementById('downloadPdfBtn');
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Generating PDF...`;
+
+            const c = getActiveCourse();
+            const mount = document.getElementById('pdfMountContainer');
+            const printContainer = document.getElementById('printableLabRecord');
+            
+            printContainer.innerHTML = buildPrintableDocumentHtml();
+            mount.style.zIndex = "999999";
+            mount.style.opacity = "1";
+
+            await Promise.all(Array.from(printContainer.querySelectorAll('img')).map(im => im.decode ? im.decode().catch(() => {}) : Promise.resolve()));
+            await new Promise(r => setTimeout(r, 300));
+
+            const opt = {
+                margin: 0,
+                filename: `${student.regNo}_${c.code}_${getDegreeShort()}_LabRecord.pdf`.replace(/[^\w.\-]+/g, '_'),
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false, x: 0, y: 0, width: 760, scrollX: 0, scrollY: 0, windowWidth: 760 },
+                jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
+                pagebreak: { before: '.pdf-a4-page' }
+            };
+
+            try {
+                await html2pdf().set(opt).from(printContainer).save();
+                addLog("PDF", "DOWNLOADED", null);
+                alert("Lab record PDF downloaded successfully!");
+            } catch (err) {
+                alert("Error during PDF download: " + err.message);
+            } finally {
+                mount.style.zIndex = "-9999";
+                mount.style.opacity = "0";
+                printContainer.innerHTML = "";
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = `<i class="fa-solid fa-file-arrow-down"></i> Download PDF`;
+            }
+        }
+    
+        // ==================== FIXES: helpers ====================
+        function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+        function escRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+        function keyNow() { return document.getElementById('codeLangSelect').value + '\u0000' + document.getElementById('codeEditorArea').value; }
+        function invalidateIfChanged() {
+            if (currentPassed && passedKey !== keyNow()) {
+                currentPassed = false;
+                const pill = document.getElementById('compilerStatusPill');
+                pill.textContent = "NOT EVALUATED"; pill.style.color = "#94a3b8";
+            }
+        }
+        function sanitizePrograms(list) {
+            return (Array.isArray(list) ? list : []).map(p => {
+                p = p || {};
+                return { title: String(p.title || 'Untitled').slice(0, 300), lang: Object.prototype.hasOwnProperty.call(IDE_ENVIRONMENTS, p.lang) ? p.lang : 'c', code: '', sampleInput: String(p.sampleInput || ''), expectedOutput: String(p.expectedOutput || '') };
+            });
+        }
+        let compilerOverride = '';
+        function getCompilerUrl() { return compilerOverride || (localStorage.getItem('hits_compiler_url') || '').trim() || 'https://ce.judge0.com'; }
+        function saveCompilerUrl() {
+            const v = document.getElementById('compilerUrlInput').value.trim();
+            if (v && !/^https?:\/\//i.test(v)) { alert('Endpoint must start with http:// or https://'); return; }
+            localStorage.setItem('hits_compiler_url', v);
+            alert(v ? 'Compiler endpoint saved. Generate a new student link so students use it.' : 'Using the default public compiler (Judge0 CE).');
+        }
+        let j0Langs = null;
+        async function judge0LangId(api, lang) {
+            const fb = { c: 50, cpp: 54, java: 62, python: 71, sql: 82 };
+            const re = { c: /^C \(GCC/i, cpp: /^C\+\+ \(GCC/i, java: /^Java \(/i, python: /^Python \(3/i, sql: /^SQL/i }[lang];
+            try {
+                if (!j0Langs || j0Langs.api !== api) {
+                    let list = null;
+                    try { const c = JSON.parse(localStorage.getItem('hits_j0langs') || 'null'); if (c && c.api === api && Date.now() - c.t < 864e5) list = c.list; } catch (e) {}
+                    if (!list) {
+                        const r = await fetchRetry(api + '/languages', {}, 3);
+                        list = r.ok ? (await r.json()).map(l => ({ id: l.id, name: l.name })) : [];
+                        if (list.length) try { localStorage.setItem('hits_j0langs', JSON.stringify({ api, t: Date.now(), list })); } catch (e) {}
+                    }
+                    j0Langs = { api, list };
+                }
+                const m = j0Langs.list.filter(l => re.test(l.name)).sort((a, b) => b.id - a.id)[0];
+                if (m) return m.id;
+            } catch (e) {}
+            return fb[lang];
+        }
+
+        // Faculty PIN lock (per browser)
+        async function sha(s) {
+            try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('hits:' + s)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
+            catch (e) { let h = 5381; for (const ch of 'hits:' + s) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0; return 'x' + h; }
+        }
+        let adminUnlockCb = null;
+        function requireAdminUnlock(cb) {
+            if (sessionStorage.getItem('hits_admin_ok') === '1') { cb(); return; }
+            adminUnlockCb = cb;
+            const first = !localStorage.getItem('hits_admin_pin');
+            document.getElementById('adminLockTitle').textContent = first ? 'Set a Faculty PIN' : 'Faculty Login';
+            document.getElementById('adminLockMsg').textContent = first ? 'Choose a PIN (min 4 characters) to protect this portal on this browser.' : 'Enter your faculty PIN to continue.';
+            document.getElementById('adminLock').classList.remove('hidden');
+        }
+        async function submitAdminPin() {
+            const v = document.getElementById('adminPinInput').value, err = document.getElementById('adminLockErr');
+            if (v.length < 4) { err.textContent = 'PIN must be at least 4 characters.'; return; }
+            const h = await sha(v), stored = localStorage.getItem('hits_admin_pin');
+            if (!stored) localStorage.setItem('hits_admin_pin', h);
+            else if (stored !== h) { err.textContent = 'Incorrect PIN.'; return; }
+            sessionStorage.setItem('hits_admin_ok', '1');
+            document.getElementById('adminLock').classList.add('hidden');
+            if (adminUnlockCb) adminUnlockCb();
+        }
+        function initAdminView() {
+            sheetCfg = { url: localStorage.getItem('hits_sheet_url') || '', key: localStorage.getItem('hits_sheet_key') || '' };
+            document.getElementById('sheetUrlInput').value = sheetCfg.url; document.getElementById('sheetKeyInput').value = sheetCfg.key;
+            refreshLogoPreview();
+            document.getElementById('compilerUrlInput').value = localStorage.getItem('hits_compiler_url') || '';
+            document.getElementById('adminPortalView').classList.remove('hidden');
+            renderCourseDropdown(); renderActiveCourseForm(); renderAdminProgramList();
+        }
+
+        // Logs, submissions, export
+        function readLogs() { try { return JSON.parse(localStorage.getItem('hits_lab_logs') || '[]'); } catch (e) { return []; } }
+        function readSubs() { try { return JSON.parse(localStorage.getItem('hits_lab_submissions') || '{}'); } catch (e) { return {}; } }
+        function addLog(action, status, p) {
+            if (!student) return;
+            const c = getActiveCourse(), logs = readLogs();
+            logs.push({ Timestamp: new Date().toISOString(), Course: c.code, Degree: c.degree, RegNo: student.regNo, Name: student.name, Program: p ? p.title : '', Language: p ? (document.getElementById('codeLangSelect').value || p.lang) : '', Action: action, Status: status });
+            try { localStorage.setItem('hits_lab_logs', JSON.stringify(logs.slice(-2000))); } catch (e) {} sheetQueue(logs[logs.length - 1], null);
+        }
+        function downloadSubmissionFile() {
+            if (!student) return;
+            const c = getActiveCourse();
+            const payload = { type: 'hits-submission', version: 1, course: { code: c.code, name: c.name, degree: c.degree }, student: { name: student.name, regNo: student.regNo }, logs: readLogs().filter(l => l.RegNo === student.regNo && l.Course === c.code), records: savedRecords, generated: new Date().toISOString() };
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+            a.download = `${student.regNo}_${c.code}_submission.json`.replace(/[^\w.\-]+/g, '_');
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }
+        function importStudentSubmissions(e) {
+            const files = Array.from(e.target.files || []); e.target.value = '';
+            if (!files.length) return;
+            const logs = readLogs(), subs = readSubs(), key = l => [l.Timestamp, l.RegNo, l.Action, l.Program].join('|');
+            const seen = new Set(logs.map(key)); let nLogs = 0, nStud = 0;
+            Promise.all(files.map(f => f.text().then(x => { try { return JSON.parse(x); } catch (err) { return null; } }))).then(list => {
+                list.forEach(d => {
+                    if (!d || d.type !== 'hits-submission' || !d.student || !d.course) return;
+                    nStud++;
+                    (d.logs || []).forEach(l => { if (!seen.has(key(l))) { seen.add(key(l)); logs.push(l); nLogs++; } });
+                    (d.records || []).forEach(r => { subs[[d.course.code, d.student.regNo, r.title].join('|')] = { Course: d.course.code, RegNo: d.student.regNo, Name: d.student.name, Program: r.title, Language: r.lang, Date: r.date, Code: r.code, Output: r.output, ...(() => { const m = computeMarks(r); return { Aim: m.aim, Algorithm: m.algo, Program: m.prog, OutputMarks: m.out, Total: m.total, Attempts: r.attempts == null ? '' : r.attempts, Violations: r.violations || 0 }; })() }; });
+                });
+                localStorage.setItem('hits_lab_logs', JSON.stringify(logs));
+                localStorage.setItem('hits_lab_submissions', JSON.stringify(subs));
+                alert(`Imported ${nStud} submission file(s) with ${nLogs} new log entries.`);
+            });
+        }
+        function exportStudentLogsExcel() {
+            const logs = readLogs(), subs = Object.values(readSubs());
+            if (!logs.length && !subs.length) { alert('No student data yet. Students should send you their Submission File (.json); use "Import Submissions" first.'); return; }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(logs), 'Logs');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(subs), 'Submitted Programs');
+            XLSX.writeFile(wb, `${getActiveCourse().code}_Student_Logs.xlsx`);
+        }
+    
+        // ==================== FIXES: output panel + logo ====================
+        function showRunResult(box, stdin, output, ok, msg) {
+            const lbl = (txt, col) => `<span style="color:${col};font-weight:700;">${txt}</span>`;
+            box.innerHTML = (stdin && stdin.trim() ? lbl('▶ INPUT GIVEN:', '#93c5fd') + '\n' + esc(stdin.trim()) + '\n\n' : '')
+                + lbl('▶ PROGRAM OUTPUT:', '#fcd34d') + '\n<span style="color:#f8fafc;font-size:13px;">' + esc(output) + '</span>\n\n'
+                + (ok ? lbl('✅ TEST CASE PASSED', '#34d399') : lbl('❌ TEST CASE FAILED', '#f87171')) + '\n' + esc(msg);
+            box.scrollTop = 0;
+        }
+        let customLogo = '';
+        function getCollegeLogoHtml() {
+            const d = customLogo || localStorage.getItem('hits_logo') || '';
+            const base = getDefaultLogoHtml();
+            if (!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(d)) return base;
+            return base.replace(/<svg[\s\S]*?<\/svg>/, `<img src="${d}" alt="Logo" style="height:56px;width:auto;display:block;">`);
+        }
+        function refreshLogoPreview() {
+            const d = localStorage.getItem('hits_logo') || '', im = document.getElementById('logoPreview');
+            if (!im) return;
+            if (d) { im.src = d; im.style.display = 'block'; } else { im.removeAttribute('src'); im.style.display = 'none'; }
+        }
+        function clearLogo() { localStorage.removeItem('hits_logo'); refreshLogoPreview(); }
+        function handleLogoUpload(e) {
+            const file = e.target.files && e.target.files[0]; e.target.value = '';
+            if (!file) return;
+            const fr = new FileReader();
+            fr.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                    const LIMIT = 4500; let out = '', h = 72;
+                    do {
+                        const w = Math.max(1, Math.round(img.width * h / img.height)), cv = document.createElement('canvas');
+                        cv.width = w; cv.height = h;
+                        const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, w, h); cx.drawImage(img, 0, 0, w, h);
+                        out = cv.toDataURL('image/png');
+                        for (const q of [0.8, 0.6, 0.45]) { if (out.length <= LIMIT) break; out = cv.toDataURL('image/jpeg', q); }
+                        h -= 8;
+                    } while (out.length > LIMIT && h >= 32);
+                    if (out.length > 9000) { alert('Logo is too detailed to embed in a link. Please use a simpler image.'); return; }
+                    localStorage.setItem('hits_logo', out); refreshLogoPreview();
+                    alert('Logo saved (' + out.length + ' characters). Generate a new student link so it appears in students\' PDFs.');
+                };
+                img.onerror = () => alert('Could not read that image.');
+                img.src = fr.result;
+            };
+            fr.readAsDataURL(file);
+        }
+    
+        // ==================== Auto marks + student dashboard ====================
+        function countRunLogs(title) {
+            const c = getActiveCourse();
+            return readLogs().filter(l => l.RegNo === student.regNo && l.Course === c.code && l.Program === title && l.Action === 'RUN' && ['PASSED', 'FAILED', 'SYNTAX ERROR', 'NO OUTPUT'].includes(l.Status)).length || 1;
+        }
+        function countViolations(title) {
+            const c = getActiveCourse();
+            return readLogs().filter(l => l.RegNo === student.regNo && l.Course === c.code && l.Program === title && l.Action === 'SECURITY').length;
+        }
+        // Rubric: Aim 2 (validated against the problem) | Algorithm 2 (variables + control flow/input) | Program 4 (less 0.5 per extra attempt, min 2.5; less 1-2 for paste violations) | Output 2 (1 if 3+ violations)
+        function computeMarks(rec) {
+            const lang = rec.lang || 'c', code = rec.code || '', a = analyzeCode(code, lang), clean = stripComments(code, lang);
+            const attempts = rec.attempts != null ? rec.attempts : 1, viol = rec.violations || 0, r = n => Math.round(n * 2) / 2;
+            const hasVars = lang === 'sql' || /\b(int|float|double|char|long|short|string|bool|boolean|auto|var|let)\b/.test(clean) || /[^=!<>]=[^=]/.test(clean);
+            const aim = 2, algo = Math.min(2, (hasVars ? 1 : 0) + ((lang === 'sql' || a.decision || a.loop || a.input) ? 1 : 0));
+            const prog = r(Math.max(0, Math.max(2.5, 4 - 0.5 * Math.max(0, attempts - 1)) - (viol >= 3 ? 2 : viol >= 1 ? 1 : 0)));
+            const out = viol >= 3 ? 1 : 2;
+            return { aim, algo, prog, out, total: r(aim + algo + prog + out) };
+        }
+        function markCells(rec) {
+            const m = computeMarks(rec);
+            return [m.aim, m.algo, m.prog, m.out, m.total].map(v => `<td style="padding: 8px; text-align: center;">${v}</td>`).join('');
+        }
+        function nextPendingIdx() {
+            const ps = getActiveCourse().programs || [], i = ps.findIndex(p => !savedRecords.some(r => r.title === p.title));
+            return i < 0 ? 0 : i;
+        }
+        function showDashboard() {
+            document.getElementById('studentMainContent').classList.add('hidden');
+            document.getElementById('studentDashboard').classList.remove('hidden');
+            renderDashboard(); window.scrollTo(0, 0);
+        }
+        function openWorkspace(i) {
+            document.getElementById('studentDashboard').classList.add('hidden');
+            document.getElementById('studentMainContent').classList.remove('hidden');
+            if ((getActiveCourse().programs || []).length) selectStudentExercise(i);
+            window.scrollTo(0, 0);
+        }
+        function animateCount(el, to) {
+            const t0 = performance.now();
+            (function f(n) { const k = Math.min(1, (n - t0) / 900); el.textContent = k < 1 ? Math.round(to * k * 10) / 10 : to; if (k < 1) requestAnimationFrame(f); })(t0);
+        }
+        function renderDashboard() {
+            const $ = id => document.getElementById(id), c = getActiveCourse(), ps = c.programs || [];
+            const rec = p => savedRecords.find(r => r.title === p.title), done = ps.filter(rec);
+            const total = ps.length, pct = total ? Math.round(done.length * 100 / total) : 0;
+            const marks = done.reduce((s, p) => s + computeMarks(rec(p)).total, 0);
+            $('dbLogo').innerHTML = getCollegeLogoHtml();
+            $('dbName').textContent = student.name;
+            $('dbCourse').textContent = `${c.code} - ${c.name} (${getDegreeShort()})  |  ${student.regNo}`;
+            $('dbMsg').innerHTML = pct === 100 && total ? '<span class="db-trophy">🏆</span> All programs completed! Download your lab record.' : pct >= 50 ? 'Almost there - keep going! 🚀' : pct > 0 ? 'Great start - keep coding! 💻' : "Let's start your first program! ✨";
+            animateCount($('dbTotal'), total); animateCount($('dbDone'), done.length); animateCount($('dbPending'), total - done.length);
+            animateCount($('dbMarks'), marks); $('dbMarks').nextElementSibling.textContent = `Auto marks / ${total * 10}`;
+            $('dbPct').textContent = pct + '%';
+            const ring = $('dbRing'); ring.style.strokeDashoffset = 326.7;
+            setTimeout(() => { ring.style.strokeDashoffset = 326.7 * (1 - pct / 100); }, 80);
+            $('dbList').innerHTML = ps.map((p, i) => { const r = rec(p); return `<div class="db-item ${r ? 'done' : ''}" style="animation-delay:${i * 60}ms" onclick="openWorkspace(${i})"><div class="db-chk"><i class="fa-solid ${r ? 'fa-check' : 'fa-code'}"></i></div><div style="flex:1;font-size:13px;font-weight:600">${i + 1}. ${esc(p.title)}</div><span class="db-tag">${esc(p.lang.toUpperCase())}</span>${r ? `<span class="db-tag" style="background:#d1fae5;color:#047857">${computeMarks(r).total}/10</span>` : ''}</div>`; }).join('') || '<p style="font-size:13px;color:#64748b">No programs assigned yet.</p>';
+        }
+    
+        // ==================== Google Sheet logging ====================
+        const SHEET_RE = /^https:\/\/script\.google\.com\/[\w.\-\/]*\/s\/[\w-]+\/exec$/;
+        function cleanSheetUrl(u) { return String(u || '').trim().replace(/[?#].*$/, '').replace(/\/+$/, ''); }
+        function sheetUrlProblem(u) {
+            if (!/^https:\/\//i.test(u)) return 'The URL must start with https://';
+            if (!/script\.google\.com/i.test(u)) return 'This is not an Apps Script link. It must start with https://script.google.com/ (copy the Web app URL shown after Deploy).';
+            if (/\/dev$/i.test(u)) return 'This is the test URL (ends with /dev). Use the deployed Web app URL that ends with /exec.';
+            if (/\/edit/i.test(u) || /\/projects\//i.test(u)) return 'This is the editor address. Click Deploy > New deployment > Web app and copy the Web app URL (ends with /exec).';
+            if (!/\/exec$/i.test(u)) return 'The Web app URL must end with /exec.';
+            return 'The link format is not recognised. Copy the full Web app URL from the Deploy dialog (https://script.google.com/.../exec).';
+        }
+        const APPS_SCRIPT = "// Paste this in your Google Sheet: Extensions > Apps Script. Then Deploy > New deployment > Web app\n// (Execute as: Me, Who has access: Anyone). Copy the /exec URL into the admin page.\n// If you already deployed an older version: Deploy > Manage deployments > pencil > Version: New version > Deploy.\nconst SECRET = 'CHANGE_ME';   // must match the \"Secret key\" in the admin page\n\nfunction T(v) { const s = String(v == null ? '' : v); return /^[=+@-]/.test(s) ? \"'\" + s : s; }\nfunction say(s) { return ContentService.createTextOutput(s); }\n\n// Run this ONCE from the editor (select \"setup\" > Run) so the three tabs exist before students start\nfunction setup() {\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  [['Logs', ['Timestamp','Course','Degree','RegNo','Name','Program','Language','Action','Status']],\n   ['Submissions', ['Key','Course','RegNo','Name','Program','Language','Date','Attempts','Violations','Aim','Algorithm','ProgramMarks','OutputMarks','Total','Code','Output']],\n   ['Links', ['Code','Payload','Created']]].forEach(x => {\n    const s = ss.getSheetByName(x[0]) || ss.insertSheet(x[0]);\n    if (s.getLastRow() === 0) { s.appendRow(x[1]); s.setFrozenRows(1); }\n  });\n}\n\n// Short links: students open ?g=...&c=CODE and the page fetches the course data from here\nfunction doGet(e) {\n  const code = String((e.parameter && e.parameter.id) || '');\n  let out = { ok: false };\n  const cache = CacheService.getScriptCache();\n  const hit = /^[a-z0-9]{6,12}$/i.test(code) ? cache.get('L' + code) : null;\n  if (hit) return ContentService.createTextOutput(JSON.stringify({ ok: true, p: hit })).setMimeType(ContentService.MimeType.JSON);\n  if (/^[a-z0-9]{6,12}$/i.test(code)) {\n    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Links');\n    if (sh && sh.getLastRow() > 1) {\n      const vals = sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues();\n      for (let i = vals.length - 1; i >= 0; i--) if (vals[i][0] === code) { out = { ok: true, p: String(vals[i][1]) }; try { cache.put('L' + code, out.p, 21600); } catch (x) {} break; }\n    }\n  }\n  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);\n}\n\nfunction doPost(e) {\n  const lock = LockService.getScriptLock(); if (!lock.tryLock(30000)) return say('busy');\n  try {\n    const d = JSON.parse(e.postData.contents);\n    if (d.key !== SECRET) return say('forbidden');\n    const ss = SpreadsheetApp.getActiveSpreadsheet();\n    if (d.action === 'store') {\n      if (!/^[a-z0-9]{6,12}$/i.test(String(d.code)) || typeof d.payload !== 'string' || d.payload.length > 45000) return say('bad');\n      const sl = ss.getSheetByName('Links') || ss.insertSheet('Links');\n      if (sl.getLastRow() === 0) { sl.appendRow(['Code', 'Payload', 'Created']); sl.setFrozenRows(1); }\n      const r = sl.getLastRow() + 1;\n      sl.getRange(r, 1, 1, 2).setNumberFormat('@').setValues([[d.code, d.payload]]);\n      sl.getRange(r, 3).setValue(new Date());\n      return say('ok');\n    }\n    const sh = ss.getSheetByName('Logs') || ss.insertSheet('Logs');\n    const H = ['Timestamp','Course','Degree','RegNo','Name','Program','Language','Action','Status'];\n    if (sh.getLastRow() === 0) { sh.appendRow(H); sh.setFrozenRows(1); }\n    const rows = (d.rows || []).map(r => H.map(h => T(r[h])));\n    if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, H.length).setValues(rows);\n    const recs = d.records || [];\n    if (recs.length) {\n      const s2 = ss.getSheetByName('Submissions') || ss.insertSheet('Submissions');\n      const H2 = ['Key','Course','RegNo','Name','Program','Language','Date','Attempts','Violations','Aim','Algorithm','ProgramMarks','OutputMarks','Total','Code','Output'];\n      if (s2.getLastRow() === 0) { s2.appendRow(H2); s2.setFrozenRows(1); }\n      const keys = s2.getLastRow() > 1 ? s2.getRange(2, 1, s2.getLastRow() - 1, 1).getValues().map(r => r[0]) : [];\n      recs.forEach(r => {\n        const key = [r.Course, r.RegNo, r.Program].join('|');\n        const row = H2.map(h => h === 'Key' ? T(key) : T(String(r[h] == null ? '' : r[h]).slice(0, 40000)));\n        const i = keys.indexOf(key);\n        if (i >= 0) s2.getRange(i + 2, 1, 1, H2.length).setValues([row]);\n        else { s2.appendRow(row); keys.push(key); }\n      });\n    }\n    return say('ok');\n  } catch (err) {\n    return say('error ' + err);\n  } finally { try { lock.releaseLock(); } catch (x) {} }\n}\n";
+        let sheetCfg = { url: '', key: '' }, sheetTimer = null, sheetFlushing = false;
+        const SQ = 'hits_sheet_queue';
+        function sheetOn() { return SHEET_RE.test(sheetCfg.url || ''); }
+        function readQ() { try { const q = JSON.parse(localStorage.getItem(SQ) || '{}'); return { rows: q.rows || [], records: q.records || [] }; } catch (e) { return { rows: [], records: [] }; } }
+        function sheetQueue(row, rec) {
+            if (!sheetOn()) return;
+            const q = readQ(); if (row) q.rows.push(row); if (rec) q.records.push(rec);
+            try { localStorage.setItem(SQ, JSON.stringify(q)); } catch (e) { return; }
+            clearTimeout(sheetTimer); sheetTimer = setTimeout(flushSheetQueue, 5000 + Math.random() * 7000);
+        }
+        function queueRecord(title) {
+            const rec = savedRecords.find(r => r.title === title); if (!rec || !student) return;
+            const c = getActiveCourse(), m = computeMarks(rec);
+            sheetQueue(null, { Course: c.code, RegNo: student.regNo, Name: student.name, Program: rec.title, Language: rec.lang, Date: rec.date, Attempts: rec.attempts == null ? '' : rec.attempts, Violations: rec.violations || 0, Aim: m.aim, Algorithm: m.algo, ProgramMarks: m.prog, OutputMarks: m.out, Total: m.total, Code: rec.code, Output: rec.output });
+        }
+        async function flushSheetQueue() {
+            if (!sheetOn() || sheetFlushing) return;
+            const q = readQ(); if (!q.rows.length && !q.records.length) return;
+            sheetFlushing = true;
+            try {
+                await fetch(sheetCfg.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: sheetCfg.key, rows: q.rows, records: q.records }) });
+                const n = readQ(); n.rows = n.rows.slice(q.rows.length); n.records = n.records.slice(q.records.length);
+                localStorage.setItem(SQ, JSON.stringify(n));
+                if (n.rows.length || n.records.length) sheetTimer = setTimeout(flushSheetQueue, 1000);
+            } catch (e) { sheetTimer = setTimeout(flushSheetQueue, 15000); }
+            finally { sheetFlushing = false; }
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'hidden' || !sheetOn()) return;
+            const q = readQ(); if (!q.rows.length && !q.records.length) return;
+            try { if (navigator.sendBeacon(sheetCfg.url, new Blob([JSON.stringify({ key: sheetCfg.key, rows: q.rows, records: q.records })], { type: 'text/plain;charset=utf-8' }))) localStorage.removeItem(SQ); } catch (e) {}
+        });
+        window.addEventListener('online', flushSheetQueue);
+        function saveSheetCfg() {
+            const u = cleanSheetUrl(document.getElementById('sheetUrlInput').value), k = document.getElementById('sheetKeyInput').value.trim();
+            if (u && !SHEET_RE.test(u)) { alert(sheetUrlProblem(u)); return; }
+            document.getElementById('sheetUrlInput').value = u;
+            localStorage.setItem('hits_sheet_url', u); localStorage.setItem('hits_sheet_key', k);
+            sheetCfg = { url: u, key: k };
+            alert(u ? 'Google Sheet logging saved. Generate a new student link so students use it.' : 'Google Sheet logging turned off.');
+        }
+        function copyAppsScript() {
+            navigator.clipboard.writeText(APPS_SCRIPT).then(() => alert('Apps Script code copied. Paste it in Extensions > Apps Script, set SECRET, then deploy as a Web app.'), () => prompt('Copy this code:', APPS_SCRIPT));
+        }
+        async function testSheet() {
+            if (!sheetOn()) { alert('Save a valid Web App URL first.'); return; }
+            const row = { Timestamp: new Date().toISOString(), Course: 'TEST', Degree: '', RegNo: 'TEST000', Name: 'Test Student', Program: 'Connection test', Language: '', Action: 'TEST', Status: 'OK' };
+            try { await fetch(sheetCfg.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: sheetCfg.key, rows: [row], records: [] }) }); }
+            catch (err) { alert('Could not reach Google: ' + err.message); return; }
+            let msg = 'Test row sent. Check the "Logs" tab in your sheet (if no row appears, the Secret key or the URL is wrong).\n\n';
+            try { await (await fetch(sheetCfg.url + '?id=test0000')).json(); msg += 'Short links: READY.'; }
+            catch (e) { msg += 'Short links: NOT READY - the script did not answer correctly. Paste the latest code, then Deploy > Manage deployments > pencil > New version > Deploy, and set "Who has access" to Anyone.'; }
+            alert(msg);
+        }
+    
+        // ==================== Integrity monitoring (copy / paste / window switch) ====================
+        let toastTimer = null, integrityCount = 0, lastSec = { m: '', t: 0 }, leftAt = 0, appDialogOpen = false;
+        function updateIntegrityBadge() {
+            const b = document.getElementById('integrityBadge'); if (!b) return;
+            b.style.display = integrityCount ? 'inline-block' : 'none';
+            b.textContent = '⚠ ' + integrityCount + ' warning' + (integrityCount > 1 ? 's' : '');
+        }
+        function currentProgramOrNull() {
+            if (document.getElementById('studentMainContent').classList.contains('hidden')) return null;
+            return (getActiveCourse().programs || [])[activeIdx] || null;
+        }
+        function logIntegrity(msg) {
+            if (!student) return false;
+            const now = Date.now();
+            if (msg === lastSec.m && now - lastSec.t < 2000) return false;
+            lastSec = { m: msg, t: now };
+            try { addLog('SECURITY', String(msg || 'violation').slice(0, 100), currentProgramOrNull()); } catch (e) {}
+            integrityCount++; updateIntegrityBadge();
+            return true;
+        }
+        function showIntegrityAlert(title, text) {
+            const old = document.getElementById('integrityAlert'); if (old) old.remove();
+            const o = document.createElement('div'); o.id = 'integrityAlert';
+            o.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(127,29,29,.88);display:flex;align-items:center;justify-content:center;padding:20px';
+            o.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:430px;padding:26px;text-align:center"><div style="font-size:44px">⚠️</div><h2 style="font-size:18px;font-weight:800;color:#b91c1c;margin:6px 0">${esc(title)}</h2><p style="font-size:13px;color:#334155;margin-bottom:6px">${esc(text)}</p><p style="font-size:12px;font-weight:700;color:#475569;margin-bottom:14px">This incident has been recorded in your activity log (warning #${integrityCount}).</p><button type="button" class="btn btn-primary" onclick="document.getElementById('integrityAlert').remove()">I understand</button></div>`;
+            document.body.appendChild(o);
+        }
+        function markLeft() {
+            if (!student || leftAt || appDialogOpen) return;
+            leftAt = Date.now();
+            try { addLog('FOCUS', 'LEFT EXAM WINDOW (other tab/window)', currentProgramOrNull()); } catch (e) {}
+        }
+        function markBack() {
+            if (!leftAt) return;
+            const s = Math.round((Date.now() - leftAt) / 1000); leftAt = 0;
+            if (!student || appDialogOpen || s < 2) return;
+            logIntegrity('WINDOW SWITCH - away ' + s + 's');
+            showIntegrityAlert('You left the exam window', 'Switching to another tab or window (' + s + ' seconds) is not allowed during the lab. Stay on this page and type your own code.');
+        }
+        window.addEventListener('blur', markLeft);
+        window.addEventListener('focus', markBack);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) markLeft(); else markBack(); });
+        ['copy', 'cut', 'paste'].forEach(ev => document.addEventListener(ev, e => {
+            if (!student || e.target === document.getElementById('codeEditorArea')) return;
+            e.preventDefault();
+            triggerSecurityToast('Security Violation: ' + ev.toUpperCase() + ' is disabled in the exam workspace.');
+        }, true));
+        function askPrompt(msg, def) { appDialogOpen = true; try { return prompt(msg, def); } finally { appDialogOpen = false; leftAt = 0; } }
+        const _nativeAlert = window.alert.bind(window);
+        window.alert = m => { appDialogOpen = true; try { _nativeAlert(m); } finally { appDialogOpen = false; leftAt = 0; } };
+    
+        // ==================== Short links (stored in the Google Sheet) ====================
+        async function makeShortLink(compressed, baseUrl) {
+            const alpha = 'abcdefghjkmnpqrstuvwxyz23456789', rnd = crypto.getRandomValues(new Uint8Array(8)); let code = '';
+            rnd.forEach(b => { code += alpha[b % alpha.length]; });
+            const base = sheetCfg.url; let why = 'timed out waiting for Google.';
+            try { await fetch(base, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: sheetCfg.key, action: 'store', code, payload: compressed }) }); }
+            catch (e) { return { url: null, why: 'could not reach Google (' + e.message + ').' }; }
+            for (let i = 0; i < 10; i++) {
+                await new Promise(r => setTimeout(r, 2000));
+                try {
+                    const resp = await fetch(base + '?id=' + code); let d;
+                    try { d = await resp.json(); } catch (e) { why = 'the script did not return data. The new script code is probably not deployed yet (Deploy > Manage deployments > pencil > New version > Deploy).'; continue; }
+                    if (!d.ok) { why = 'the data was not saved. Check that the Secret key in the admin page is exactly the same as SECRET in the script.'; continue; }
+                    if (d.p !== compressed) { why = 'the saved data does not match (length ' + String(d.p).length + ' vs ' + compressed.length + ').'; continue; }
+                    return { url: baseUrl + '?g=' + encodeURIComponent(base.replace('https://script.google.com/', '').replace(/\/exec$/, '')) + '&c=' + code, why: '' };
+                } catch (e) { why = 'the browser was blocked from reading the script. In Deploy > Manage deployments, set "Who has access" to Anyone.'; }
+            }
+            return { url: null, why };
+        }
+        async function loadShortLink(g, c) {
+            document.body.insertAdjacentHTML('beforeend', '<div id="shortLoading" style="position:fixed;inset:0;z-index:9998;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-family:sans-serif;padding:20px;text-align:center">Loading your lab...</div>');
+            const box = document.getElementById('shortLoading'), base = 'https://script.google.com/' + g + '/exec';
+            try {
+                if (!SHEET_RE.test(base) || !/^[a-z0-9]{6,12}$/i.test(c)) throw new Error('invalid link');
+                let d; const ck = 'hits_course_' + c;
+                try { d = await (await fetchRetry(base + '?id=' + encodeURIComponent(c), {}, 3)).json(); } catch (e) { d = null; }
+                if (!d || !d.ok) { const cached = localStorage.getItem(ck); if (cached) d = { ok: true, p: cached }; }
+                if (!d || !d.ok) throw new Error('link not found');
+                try { localStorage.setItem(ck, d.p); } catch (e) {}
+                if (!startStudent(safeDecompress(d.p))) throw new Error('data unreadable');
+                box.remove();
+            } catch (e) { box.textContent = 'This link could not be loaded (' + e.message + '). Check your internet connection or ask your faculty for a new link.'; }
+        }
+    
+        // ==================== Load protection (many students at once) ====================
+        async function fetchRetry(url, opts, tries) {
+            tries = tries || 5; let last = null;
+            for (let i = 0; i < tries; i++) {
+                try {
+                    const r = await fetch(url, opts);
+                    if (r.status !== 429 && r.status < 500) return r;
+                    last = r;
+                } catch (e) { if (e.name === 'AbortError' || i === tries - 1) throw e; }
+                if (i === tries - 1) break;
+                const box = document.getElementById('terminalConsole');
+                if (box) box.textContent = 'Compiler server is busy - retrying (' + (i + 1) + '/' + (tries - 1) + ')...';
+                await new Promise(r => setTimeout(r, 1500 * Math.pow(2, i) + Math.random() * 1500));
+            }
+            return last;
+        }
+    </script>
+</body>
+</html>
